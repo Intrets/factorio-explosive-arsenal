@@ -4,6 +4,7 @@ local item_sounds = require("__base__.prototypes.item_sounds")
 local explosion_animations = require("__base__.prototypes.entity.explosion-animations")
 
 require("sound-util")
+require("util.math")
 
 local dummy_animation = {
     filename = "__rework__/graphics/entity/dummy-unit-nothing-sprite.png",
@@ -12,7 +13,85 @@ local dummy_animation = {
 }
 
 local scaled_big_explosion = explosion_animations.big_explosion()
-scaled_big_explosion.scale = 6.0
+scaled_big_explosion[1].scale = 2.0
+scaled_big_explosion[1].shift = { 0.1875 * 2, -0.75 * 2 - 1 }
+
+local remote_charge_damage_payload = {
+    {
+        type = "direct",
+        action_delivery = {
+            type = "instant",
+            target_effects = { {
+                type = "create-entity",
+                entity_name = "remote-charge-explosion",
+            } }
+        }
+    },
+    {
+        type = "area",
+        radius = 10.0,
+        action_delivery =
+        {
+            type = "instant",
+            target_effects =
+            {
+                {
+                    type = "damage",
+                    damage = { amount = 1000, type = "explosion" }
+                }
+            }
+        }
+    },
+    {
+        type = "area",
+        radius = 1.0,
+        action_delivery =
+        {
+            type = "instant",
+            target_effects =
+            {
+                {
+                    type = "damage",
+                    damage = { amount = 0.1, type = "ground-explosion" }
+                }
+            }
+        }
+    },
+    {
+        type = "direct",
+        action_delivery =
+        {
+            type = "instant",
+            target_effects =
+            {
+                {
+                    type = "create-entity",
+                    entity_name = "big-scorchmark-tintable",
+                    check_buildability = true
+                },
+                {
+                    type = "destroy-cliffs",
+                    radius = 5.0,
+                },
+                {
+                    type = "invoke-tile-trigger",
+                    repeat_count = 1
+                },
+                {
+                    type = "destroy-decoratives",
+                    from_render_layer = "decorative",
+                    to_render_layer = "object",
+                    include_soft_decoratives = true,
+                    include_decals = false,
+                    invoke_decorative_trigger = true,
+                    decoratives_with_trigger_only = false,
+                    radius = 10,
+                    probability = 0.1
+                }
+            }
+        }
+    }
+}
 
 data:extend({
     {
@@ -32,7 +111,7 @@ data:extend({
         subgroup = "gun-explosions",
         order = "a-a-a",
         height = 0,
-        animations = explosion_animations.big_explosion(),
+        animations = scaled_big_explosion,
         smoke = "smoke-fast",
         smoke_count = 20,
         smoke_slow_down_factor = 1,
@@ -47,73 +126,8 @@ data:extend({
         name = "remote-charge-explosion-dummy-capsule",
         flags = { "not-on-map" },
         hidden = true,
-        acceleration = 0.005,
-        action =
-        {
-            {
-                type = "area",
-                radius = 5.0,
-                action_delivery =
-                {
-                    type = "instant",
-                    target_effects =
-                    {
-                        {
-                            type = "damage",
-                            damage = { amount = 500, type = "explosion" }
-                        }
-                    }
-                }
-            },
-            {
-                type = "area",
-                radius = 1.0,
-                action_delivery =
-                {
-                    type = "instant",
-                    target_effects =
-                    {
-                        {
-                            type = "damage",
-                            damage = { amount = 0.1, type = "ground-explosion" }
-                        }
-                    }
-                }
-            },
-            {
-                type = "direct",
-                action_delivery =
-                {
-                    type = "instant",
-                    target_effects =
-                    {
-                        {
-                            type = "create-entity",
-                            entity_name = "small-scorchmark-tintable",
-                            check_buildability = true
-                        },
-                        {
-                            type = "destroy-cliffs",
-                            radius = 5.0,
-                        },
-                        {
-                            type = "invoke-tile-trigger",
-                            repeat_count = 1
-                        },
-                        {
-                            type = "destroy-decoratives",
-                            from_render_layer = "decorative",
-                            to_render_layer = "object",
-                            include_soft_decoratives = true,
-                            include_decals = false,
-                            invoke_decorative_trigger = true,
-                            decoratives_with_trigger_only = false,
-                            radius = 10
-                        }
-                    }
-                }
-            }
-        }
+        acceleration = 50,
+        action = remote_charge_damage_payload
     },
     {
         type = "capsule",
@@ -207,7 +221,7 @@ data:extend({
         stack_size = 1
     },
     {
-        type = "simple-entity-with-owner",
+        type = "land-mine",
         name = "remote-charge",
         icon = "__base__/graphics/icons/land-mine.png",
         flags =
@@ -222,22 +236,25 @@ data:extend({
         fast_replaceable_group = "land-mine",
         mined_sound = sounds.deconstruct_small(1.0),
         max_health = 15,
+        trigger_radius = 0,
+        timeout = 4294967295,
         create_ghost_on_death = false,
         resistances = { { type = "impact", decrease = 10000, percent = 100 }, { type = "explosion", decrease = 10000, percent = 100 }, { type = "ground-explosion", decrease = 10000, percent = 100 } },
         corpse = "land-mine-remnants",
-        dying_explosion = "remote-charge-explosion",
-        collision_box = { { -0.4, -0.4 }, { 0.4, 0.4 } },
-        selection_box = { { -0.5, -0.5 }, { 0.5, 0.5 } },
+        collision_box = { { -1.1, -1.1 }, { 1.1, 1.1 } },
+        selection_box = { { -1.0, -1.0 }, { 1.0, 1.0 } },
         damaged_trigger_effect = hit_effects.entity(),
         open_sound = sounds.machine_open,
         close_sound = sounds.machine_close,
-        picture =
+        picture_safe =
         {
             filename = "__base__/graphics/entity/land-mine/land-mine.png",
             priority = "medium",
             width = 64,
             height = 64,
-            scale = 0.5
+            scale = 1.0,
+            tint = { 0.5, 0.5, 0.5, 1.0 },
         },
+        action = remote_charge_damage_payload
     },
 })

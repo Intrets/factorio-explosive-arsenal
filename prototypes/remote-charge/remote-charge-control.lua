@@ -4,13 +4,15 @@ local detonation_list = {}
 local detonation_index = 1
 local detonation_list_end = 0
 
-local detonation_time_interval_milliseconds = { min = 60, max = 120 }
+local detonation_time_interval_milliseconds = { min = 30, max = 120 }
 local detonation_timer = 0
-local get_detonation_trigger = function () return math.random(detonation_time_interval_milliseconds.min, detonation_time_interval_milliseconds.max) end
+local get_detonation_trigger = function()
+    return math.random(detonation_time_interval_milliseconds.min,
+        detonation_time_interval_milliseconds.max)
+end
 local detonation_trigger = 300
 
 script.on_event(defines.events.on_player_used_capsule, function(event)
-    game.print(event.position)
     local player = game.players[event.player_index]
     if player == nil then return end
 
@@ -38,6 +40,16 @@ script.on_event(defines.events.on_player_used_capsule, function(event)
     end
 
     table.sort(detonation_list, function(left, right) return left.unit_number < right.unit_number end)
+
+    -- if detonation_list_end > 2 then
+    --     for i = 1, detonation_list_end - 2 do
+    --         local new_i = math.random(i + 1, detonation_list_end - 1)
+
+    --         local swap = detonation_list[new_i]
+    --         detonation_list[new_i] = detonation_list[i]
+    --         detonation_list[i] = swap
+    --     end
+    -- end
 end)
 
 script.on_event(defines.events.on_tick, function(event)
@@ -58,13 +70,13 @@ script.on_event(defines.events.on_tick, function(event)
                     return false
                 end
 
-                remote_charge.surface.create_entity{
+                remote_charge.surface.create_entity {
                     name = "remote-charge-explosion-dummy-capsule",
                     position = remote_charge.position,
                     force = "neutral",
                     target = remote_charge
                 }
-                remote_charge.damage(10000000, "enemy", "physical")
+                remote_charge.destroy()
 
                 return true
             end
