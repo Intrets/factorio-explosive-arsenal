@@ -161,4 +161,24 @@ data:extend({
         results = { { type = "item", name = "steel-plate", amount = 1 } },
         allow_productivity = true
     },
+    {
+        type = "recipe",
+        name = "stone-from-lava",
+        icon = "__space-age__/graphics/icons/fluid/molten-copper-from-lava.png",
+        category = "fluid-smelting",
+        subgroup = "vulcanus-processes",
+        order = "a[melting]-a[lava-a]",
+        auto_recycle = false,
+        enabled = true,
+        ingredients =
+        {
+          {type = "item", name = "calcite", amount = 1},
+        },
+        energy_required = 1,
+        results =
+        {
+          {type = "item", name = "stone", amount = 30},
+        },
+        allow_productivity = true
+      },
 })
