@@ -77,3 +77,33 @@ script.on_event({ defines.events.on_built_entity, defines.events.on_robot_built_
         event.entity.rotatable = false
     end
 end)
+
+
+script.on_event(defines.events.on_player_created, function(event)
+    game.players[event.player_index].character_running_speed_modifier = 5
+    game.players[event.player_index].character_crafting_speed_modifier = 5
+    game.players[event.player_index].character_mining_speed_modifier = 5
+    game.players[event.player_index].character_reach_distance_bonus = 5
+end)
+
+require("prototypes.remote-charge.remote-charge-control")
+
+names = {}
+
+function register_prototype_control(name)
+    table.insert(names, name)
+end
+
+function load_prototype_controls()
+    for _, name in pairs(names) do
+        require("prototypes." .. name .. "." .. name .. "-control")
+    end
+end
+
+register_prototype_control("remote-charge")
+
+script.on_event("reload-script-controls", function(event)
+    game.reload_mods()
+end)
+
+load_prototype_controls()

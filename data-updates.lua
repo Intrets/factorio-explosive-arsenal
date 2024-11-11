@@ -1,3 +1,5 @@
+require("prototypes.remote-charge.remote-charge-data-updates")
+
 local disabled_recipes = {
     ["recycler"] = true,
     ["small-electric-pole"] = true,

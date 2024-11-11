@@ -8,68 +8,71 @@ require("prototypes.tungsten-pipe")
 require("prototypes.demolisher-pipe")
 require("prototypes.fluid-smelting")
 require("prototypes.vulcanus-map-gen")
+require("prototypes.concrete-fluid")
+
+require("prototypes.remote-charge.remote-charge-data")
 
 data.extend({
-  {
-    type = "surface-property",
-    name = "atmospheric-contamination",
-    default_value = 1
-  },
+    {
+        type = "surface-property",
+        name = "atmospheric-contamination",
+        default_value = 1
+    },
 })
 
 starter_reactor_equipment = util.table.deepcopy(data.raw["armor"]["modular-armor"])
 starter_reactor_equipment.name = "starter-reactor-equipment"
 
 data:extend(
-  {
     {
-      type = "module-category",
-      name = "space-grade"
-    }
-  })
+        {
+            type = "module-category",
+            name = "space-grade"
+        }
+    })
 
 data:extend(
-  {
     {
-      type = "module-category",
-      name = "futuristic"
-    }
-  })
+        {
+            type = "module-category",
+            name = "futuristic"
+        }
+    })
 
 data:extend({ {
-  type = "module",
-  name = "space-grade-module",
-  localised_description = { "item-description.space-grade-module" },
-  icon = "__rework__/graphics/icons/space-grade-module.png",
-  subgroup = "module",
-  color_hint = { text = "Q" },
-  category = "space-grade",
-  tier = 1,
-  order = "d[quality]-a[quality-module-1]",
-  inventory_move_sound = item_sounds.module_inventory_move,
-  pick_sound = item_sounds.module_inventory_pickup,
-  drop_sound = item_sounds.module_inventory_move,
-  stack_size = 50,
-  weight = 20 * kg,
-  effect = { quality = 10.0, speed = 0.0 }
+    type = "module",
+    name = "space-grade-module",
+    localised_description = { "item-description.space-grade-module" },
+    icon = "__rework__/graphics/icons/space-grade-module.png",
+    subgroup = "module",
+    color_hint = { text = "Q" },
+    category = "space-grade",
+    tier = 1,
+    order = "d[quality]-a[quality-module-1]",
+    inventory_move_sound = item_sounds.module_inventory_move,
+    pick_sound = item_sounds.module_inventory_pickup,
+    drop_sound = item_sounds.module_inventory_move,
+    stack_size = 50,
+    weight = 20 * kg,
+    effect = { quality = 10.0, speed = 0.0 }
 } })
 
 data:extend({ {
-  type = "module",
-  name = "futuristic-module",
-  localised_description = { "item-description.futuristic-module" },
-  icon = "__rework__/graphics/icons/futuristic-module.png",
-  subgroup = "module",
-  color_hint = { text = "Q" },
-  category = "futuristic",
-  tier = 1,
-  order = "d[quality]-a[quality-module-1]",
-  inventory_move_sound = item_sounds.module_inventory_move,
-  pick_sound = item_sounds.module_inventory_pickup,
-  drop_sound = item_sounds.module_inventory_move,
-  stack_size = 50,
-  weight = 20 * kg,
-  effect = { quality = 20.0, speed = 0.0 }
+    type = "module",
+    name = "futuristic-module",
+    localised_description = { "item-description.futuristic-module" },
+    icon = "__rework__/graphics/icons/futuristic-module.png",
+    subgroup = "module",
+    color_hint = { text = "Q" },
+    category = "futuristic",
+    tier = 1,
+    order = "d[quality]-a[quality-module-1]",
+    inventory_move_sound = item_sounds.module_inventory_move,
+    pick_sound = item_sounds.module_inventory_pickup,
+    drop_sound = item_sounds.module_inventory_move,
+    stack_size = 50,
+    weight = 20 * kg,
+    effect = { quality = 20.0, speed = 0.0 }
 } })
 
 -- data.raw.quality["uncommon"].next_probability = 1.0
@@ -122,68 +125,77 @@ data:extend({ {
 -- )
 data:extend
 ({
-  {
-    type = "technology",
-    name = "quality-test",
-    icon_size = 256,
-    icon = "__quality__/graphics/technology/epic-quality.png",
-    icon_size = 256,
-    effects =
     {
-      {
-        type = "unlock-quality",
-        quality = "space-grade"
-      },
-    },
-    prerequisites = { "logistic-science-pack" },
-    unit =
-    {
-      count = 5000,
-      ingredients =
-      {
-        { "automation-science-pack", 1 },
-        { "logistic-science-pack",   1 },
-      },
-      time = 60
+        type = "technology",
+        name = "quality-test",
+        icon_size = 256,
+        icon = "__quality__/graphics/technology/epic-quality.png",
+        icon_size = 256,
+        effects =
+        {
+            {
+                type = "unlock-quality",
+                quality = "space-grade"
+            },
+        },
+        prerequisites = { "logistic-science-pack" },
+        unit =
+        {
+            count = 5000,
+            ingredients =
+            {
+                { "automation-science-pack", 1 },
+                { "logistic-science-pack",   1 },
+            },
+            time = 60
+        }
     }
-  }
 })
 
 data:extend
 ({
-  {
-    type = "recipe",
-    name = "space-grade-module",
-    enabled = true,
-    ingredients =
     {
-      { type = "item", name = "electronic-circuit", amount = 5 },
-      { type = "item", name = "advanced-circuit",   amount = 5 },
+        type = "recipe",
+        name = "space-grade-module",
+        enabled = true,
+        ingredients =
+        {
+            { type = "item", name = "electronic-circuit", amount = 5 },
+            { type = "item", name = "advanced-circuit",   amount = 5 },
+        },
+        energy_required = 15,
+        results = { { type = "item", name = "space-grade-module", amount = 1 } }
     },
-    energy_required = 15,
-    results = { { type = "item", name = "space-grade-module", amount = 1 } }
-  },
-  {
-    type = "recipe",
-    name = "futuristic-module",
-    enabled = true,
-    ingredients =
     {
-      { type = "item", name = "advanced-circuit", amount = 5 },
-      { type = "item", name = "processing-unit",  amount = 5 },
+        type = "recipe",
+        name = "futuristic-module",
+        enabled = true,
+        ingredients =
+        {
+            { type = "item", name = "advanced-circuit", amount = 5 },
+            { type = "item", name = "processing-unit",  amount = 5 },
+        },
+        energy_required = 30,
+        results = { { type = "item", name = "futuristic-module", amount = 1 } }
     },
-    energy_required = 30,
-    results = { { type = "item", name = "futuristic-module", amount = 1 } }
-  },
 })
 
 data:extend({
-  {
-    type = "recipe",
-    name = "quality-test-helper",
-    enabled = true,
-    ingredients = { { type = "item", name = "iron-plate", amount = 1 } },
-    energy_required = 0.1,
-    results = { { type = "item", name = "iron-plate", amount = 1 } }
-  }
+    {
+        type = "recipe",
+        name = "quality-test-helper",
+        enabled = true,
+        ingredients = { { type = "item", name = "iron-plate", amount = 1 } },
+        energy_required = 0.1,
+        results = { { type = "item", name = "iron-plate", amount = 1 } }
+    }
+})
+
+data:extend({
+    {
+        type = "custom-input",
+        name = "reload-script-controls",
+        key_sequence = "F7",
+        consuming = "game-only",
+    }
 })
