@@ -1,5 +1,3 @@
-require("prototypes-list").do_control()
-
 function do_unlocks2(unlocks_map, technologies, technology)
     technology.researched = true
 
@@ -63,31 +61,74 @@ function add_starter_items(player)
     grid.put { name = "personal-roboport-equipment" }
 end
 
--- once = false
--- script.on_event(defines.events.on_tick, function(event)
---     if not once then
---         for _, player in pairs(game.players) do
---             do_unlocks(player)
---             -- add_starter_items(player)
---         end
---         once = true
---     end
--- end)
+local event_table = {}
 
-script.on_event({ defines.events.on_built_entity, defines.events.on_robot_built_entity }, function(event)
-    if event.entity.name == "demolisher-furnace" then
-        event.entity.rotatable = false
+local function add_on_event(name, events, f)
+    local function do_event(event)
+        if event_table[event] == nil then
+            event_table[event] = {}
+
+            script.on_event(event, function(e)
+                for _, callback in pairs(event_table[event]) do
+                    callback(e)
+                end
+            end)
+        end
+
+        event_table[event][name] = f
     end
-end)
 
+    if type(events) == "table" then
+        for _, event in pairs(events) do
+            do_event(event)
+        end
+    else
+        do_event(events)
+    end
+end
 
-script.on_event(defines.events.on_player_created, function(event)
-    game.players[event.player_index].character_running_speed_modifier = 5
-    game.players[event.player_index].character_crafting_speed_modifier = 5
-    game.players[event.player_index].character_mining_speed_modifier = 5
-    game.players[event.player_index].character_reach_distance_bonus = 5
-end)
+rework_control = {
+    on_event = add_on_event
+}
 
-script.on_event("reload-script-controls", function(event)
-    game.reload_mods()
-end)
+rework_control.on_event(
+    "set player stats",
+    defines.events.on_player_created,
+    function(event)
+        game.players[event.player_index].character_running_speed_modifier = 5
+        game.players[event.player_index].character_crafting_speed_modifier = 5
+        game.players[event.player_index].character_mining_speed_modifier = 5
+        game.players[event.player_index].character_reach_distance_bonus = 5
+    end)
+
+rework_control.on_event(
+    "prevent demolisher furnace rotation",
+    { defines.events.on_built_entity, defines.events.on_robot_built_entity },
+    function(event)
+        if event.entity.name == "demolisher-furnace" then
+            event.entity.rotatable = false
+        end
+    end)
+
+once = false
+rework_control.on_event(
+    "do unlocks",
+    defines.events.on_tick,
+    function(event)
+        if not once then
+            for _, player in pairs(game.players) do
+                do_unlocks(player)
+                -- add_starter_items(player)
+            end
+            once = true
+        end
+    end)
+
+rework_control.on_event(
+    "reload script controls",
+    "reload-script-controls",
+    function(event)
+        game.reload_mods()
+    end)
+
+require("prototypes-list").do_control()

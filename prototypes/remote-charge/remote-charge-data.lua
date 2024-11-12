@@ -77,17 +77,6 @@ local remote_charge_damage_payload = {
                     type = "invoke-tile-trigger",
                     repeat_count = 1
                 },
-                {
-                    type = "destroy-decoratives",
-                    from_render_layer = "decorative",
-                    to_render_layer = "object",
-                    include_soft_decoratives = true,
-                    include_decals = false,
-                    invoke_decorative_trigger = true,
-                    decoratives_with_trigger_only = false,
-                    radius = 10,
-                    probability = 0.1
-                }
             }
         }
     }
