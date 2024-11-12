@@ -1,5 +1,4 @@
--- require("prototypes-list").do_data_updates()
-require("prototypes.remote-charge.remote-charge-data-updates")
+require("prototypes-list").do_data_updates()
 
 local disabled_recipes = {
     ["recycler"] = true,

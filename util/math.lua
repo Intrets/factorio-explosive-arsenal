@@ -19,10 +19,9 @@ local function bounding_box_from_position_and_size(pos, size)
     return { left_top = sub_vec2(pos, half_extent), right_bottom = add_vec2(pos, half_extent) }
 end
 
-rmath = {
-    vec2 = vec2,
-    add_vec2 = add_vec2,
-    sub_vec2 = sub_vec2,
-    mult_vec2_scalar = mult_vec2_scalar,
-    bounding_box_from_position_and_size = bounding_box_from_position_and_size
-}
+rmath = rmath or {}
+rmath.vec2 = vec2
+rmath.add_vec2 = add_vec2
+rmath.sub_vec2 = sub_vec2
+rmath.mult_vec2_scalar = mult_vec2_scalar
+rmath.bounding_box_from_position_and_size = bounding_box_from_position_and_size

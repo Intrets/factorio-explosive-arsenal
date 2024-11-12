@@ -63,16 +63,43 @@ end
 
 local event_table = {}
 
+local development_do_init = true;
+
 local function add_on_event(name, events, f)
     local function do_event(event)
         if event_table[event] == nil then
             event_table[event] = {}
 
-            script.on_event(event, function(e)
-                for _, callback in pairs(event_table[event]) do
-                    callback(e)
-                end
-            end)
+            if development_mode and event == defines.events.on_tick then
+                script.on_event(event, function(e)
+                    if development_do_init then
+                        development_do_init = false
+                        for _, callback in pairs(event_table["on_init"]) do
+                            callback()
+                        end
+
+                        for _, callback in pairs(event_table[defines.events.on_surface_created]) do
+                            for _, surface in pairs(game.surfaces) do
+                                callback {
+                                    surface_index = surface.index,
+                                    name = defines.events.on_surface_created,
+                                    tick = 0,
+                                }
+                            end
+                        end
+                    end
+
+                    for _, callback in pairs(event_table[event]) do
+                        callback(e)
+                    end
+                end)
+            else
+                script.on_event(event, function(e)
+                    for _, callback in pairs(event_table[event]) do
+                        callback(e)
+                    end
+                end)
+            end
         end
 
         event_table[event][name] = f
@@ -87,19 +114,59 @@ local function add_on_event(name, events, f)
     end
 end
 
+development_mode = true
+
+local function add_on_configuration_changed(name, f)
+    local event = "on_configuration_changed"
+
+    if event_table[event] == nil then
+        event_table[event] = {}
+
+        script[event](function(e)
+            for _, callback in pairs(event_table[event]) do
+                callback(e)
+            end
+        end)
+    end
+
+    event_table[event][name] = f
+end
+
+local function add_on_init(name, f)
+    if development_mode then
+        add_on_configuration_changed(name, f)
+    end
+
+    local event = "on_init"
+
+    if event_table[event] == nil then
+        event_table[event] = {}
+
+        script[event](function(e)
+            for _, callback in pairs(event_table[event]) do
+                callback(e)
+            end
+        end)
+    end
+
+    event_table[event][name] = f
+end
+
+
 rework_control = {
-    on_event = add_on_event
+    on_event = add_on_event,
+    on_init = add_on_init,
 }
 
-rework_control.on_event(
-    "set player stats",
-    defines.events.on_player_created,
-    function(event)
-        game.players[event.player_index].character_running_speed_modifier = 5
-        game.players[event.player_index].character_crafting_speed_modifier = 5
-        game.players[event.player_index].character_mining_speed_modifier = 5
-        game.players[event.player_index].character_reach_distance_bonus = 5
-    end)
+-- rework_control.on_event(
+--     "set player stats",
+--     defines.events.on_player_created,
+--     function(event)
+--         game.players[event.player_index].character_running_speed_modifier = 5
+--         game.players[event.player_index].character_crafting_speed_modifier = 5
+--         game.players[event.player_index].character_mining_speed_modifier = 5
+--         game.players[event.player_index].character_reach_distance_bonus = 5
+--     end)
 
 rework_control.on_event(
     "prevent demolisher furnace rotation",

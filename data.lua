@@ -12,7 +12,7 @@ require("prototypes.concrete-fluid")
 
 require("prototypes-list").do_data()
 
-data.extend({
+data:extend({
     {
         type = "surface-property",
         name = "atmospheric-contamination",

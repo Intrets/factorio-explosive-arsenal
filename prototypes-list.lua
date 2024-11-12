@@ -7,6 +7,7 @@ local function do_part(name, part)
     local full_name = "prototypes." .. name .. "." .. name .. "-" .. part
     local status, module = pcall(require, full_name)
     if status then
+        assert(module)
         return module
     else
         return nil

@@ -1,16 +1,25 @@
 require("util.math")
 
-local detonation_list = {}
-local detonation_index = 1
-local detonation_list_end = 0
+-- local detonation_list = {}
+-- local detonation_index = 1
+-- local detonation_list_end = 0
 
 local detonation_time_interval_milliseconds = { min = 30, max = 120 }
-local detonation_timer = 0
+-- local detonation_timer = 0
 local get_detonation_trigger = function()
     return math.random(detonation_time_interval_milliseconds.min,
         detonation_time_interval_milliseconds.max)
 end
-local detonation_trigger = 300
+-- local detonation_trigger = 300
+
+rework_control.on_init("init remote charge", function()
+    storage.detonation_list = {}
+    storage.detonation_index = 1
+    storage.detonation_list_end = 1
+
+    storage.detonation_timer = 0
+    storage.detonation_trigger = 300
+end)
 
 rework_control.on_event(
     "remote charge remote trigger",
@@ -31,17 +40,17 @@ rework_control.on_event(
         }
 
         total = 0
-        detonation_list = {}
-        detonation_index = 1
-        detonation_list_end = 1
+        storage.detonation_list = {}
+        storage.detonation_index = 1
+        storage.detonation_list_end = 1
         for _, remote_charge in pairs(entities) do
-            detonation_list[detonation_list_end] = remote_charge
-            detonation_list_end = detonation_list_end + 1
-            detonation_trigger = get_detonation_trigger()
-            detonation_timer = 0
+            storage.detonation_list[storage.detonation_list_end] = remote_charge
+            storage.detonation_list_end = storage.detonation_list_end + 1
+            storage.detonation_trigger = get_detonation_trigger()
+            storage.detonation_timer = 0
         end
 
-        table.sort(detonation_list, function(left, right) return left.unit_number < right.unit_number end)
+        table.sort(storage.detonation_list, function(left, right) return left.unit_number < right.unit_number end)
 
         -- if detonation_list_end > 2 then
         --     for i = 1, detonation_list_end - 2 do
@@ -58,18 +67,18 @@ rework_control.on_event(
     "remote charge detonation",
     defines.events.on_tick,
     function(event)
-        if detonation_list_end ~= detonation_index then
-            detonation_timer = detonation_timer + 16.6666
-            if detonation_timer > detonation_trigger then
-                detonation_timer = detonation_timer - detonation_trigger
-                detonation_trigger = get_detonation_trigger()
+        if storage.detonation_list_end ~= storage.detonation_index then
+            storage.detonation_timer = storage.detonation_timer + 16.6666
+            if storage.detonation_timer > storage.detonation_trigger then
+                storage.detonation_timer = storage.detonation_timer - storage.detonation_trigger
+                storage.detonation_trigger = get_detonation_trigger()
 
                 local try_detonate = function(index)
-                    if index == detonation_list_end then
+                    if index == storage.detonation_list_end then
                         return false
                     end
 
-                    local remote_charge = detonation_list[index]
+                    local remote_charge = storage.detonation_list[index]
 
                     if not remote_charge.valid then
                         return false
@@ -86,17 +95,17 @@ rework_control.on_event(
                     return true
                 end
 
-                for i = detonation_index, detonation_list_end do
+                for i = storage.detonation_index, storage.detonation_list_end do
                     if try_detonate(i) then
-                        detonation_index = i
+                        storage.detonation_index = i
                         return
                     end
                 end
 
-                if detonation_index == detonation_list_end then
-                    detonation_list = {}
-                    detonation_index = 1
-                    detonation_list_end = 1
+                if storage.detonation_index == storage.detonation_list_end then
+                    storage.detonation_list = {}
+                    storage.detonation_index = 1
+                    storage.detonation_list_end = 1
                 end
             end
         end
