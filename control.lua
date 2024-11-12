@@ -1,3 +1,5 @@
+require("prototypes-list").do_control()
+
 function do_unlocks2(unlocks_map, technologies, technology)
     technology.researched = true
 
@@ -61,16 +63,16 @@ function add_starter_items(player)
     grid.put { name = "personal-roboport-equipment" }
 end
 
-once = false
-script.on_event(defines.events.on_tick, function(event)
-    if not once then
-        for _, player in pairs(game.players) do
-            do_unlocks(player)
-            -- add_starter_items(player)
-        end
-        once = true
-    end
-end)
+-- once = false
+-- script.on_event(defines.events.on_tick, function(event)
+--     if not once then
+--         for _, player in pairs(game.players) do
+--             do_unlocks(player)
+--             -- add_starter_items(player)
+--         end
+--         once = true
+--     end
+-- end)
 
 script.on_event({ defines.events.on_built_entity, defines.events.on_robot_built_entity }, function(event)
     if event.entity.name == "demolisher-furnace" then
@@ -86,24 +88,6 @@ script.on_event(defines.events.on_player_created, function(event)
     game.players[event.player_index].character_reach_distance_bonus = 5
 end)
 
-require("prototypes.remote-charge.remote-charge-control")
-
-names = {}
-
-function register_prototype_control(name)
-    table.insert(names, name)
-end
-
-function load_prototype_controls()
-    for _, name in pairs(names) do
-        require("prototypes." .. name .. "." .. name .. "-control")
-    end
-end
-
-register_prototype_control("remote-charge")
-
 script.on_event("reload-script-controls", function(event)
     game.reload_mods()
 end)
-
-load_prototype_controls()

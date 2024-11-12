@@ -10,7 +10,7 @@ require("prototypes.fluid-smelting")
 require("prototypes.vulcanus-map-gen")
 require("prototypes.concrete-fluid")
 
-require("prototypes.remote-charge.remote-charge-data")
+require("prototypes-list").do_data()
 
 data.extend({
     {

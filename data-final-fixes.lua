@@ -1,3 +1,5 @@
+require("prototypes-list").do_data_final_fixes()
+
 data.raw.quality["normal"].next = "space-grade"
 
 local space_grade = table.deepcopy(data.raw.quality["uncommon"])

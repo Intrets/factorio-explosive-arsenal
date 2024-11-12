@@ -1,3 +1,4 @@
+-- require("prototypes-list").do_data_updates()
 require("prototypes.remote-charge.remote-charge-data-updates")
 
 local disabled_recipes = {
