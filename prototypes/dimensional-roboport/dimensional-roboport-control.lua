@@ -69,7 +69,15 @@ rework_control.on_event(
     "dimensional roboport testing",
     defines.events.on_tick,
     function(event)
-        if game.tick % 1 == 0 then
+        local accumulators = game.surfaces[2].find_entities_filtered { name = "dimensional-accumulator" }
+        local trigger_count = 0
+        if accumulators[1] ~= nil then
+            local accumulator = accumulators[1]
+            trigger_count = math.floor(accumulator.energy / 5000000000)
+            accumulator.energy = 0
+        end
+
+        for i = 1, trigger_count do
             for surface_index, surface_builders in pairs(storage.dimensional_builder_surface_storage) do
                 for _, builder in pairs(surface_builders) do
                     if builder.end_index ~= 1 then
@@ -85,13 +93,14 @@ rework_control.on_event(
 
                             if created_entity ~= nil then
                                 game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
-                                break
+                                goto stop
                             end
-                            ghost.revive()
                         end
                     end
                 end
             end
         end
+
+        ::stop::
     end
 )
