@@ -10,11 +10,41 @@ local function shuffle(table, end_index)
     end
 end
 
+local function table_get_or_init_f(table, key, f)
+    local result = table[key]
+    if result ~= nil then
+        return result
+    else
+        local value = f()
+        table[key] = value
+        return value
+    end
+end
+
 local function table_get_or_init(table, key, value)
-    table[key] = table[key] or value
-    return table[key]
+    local result = table[key]
+    if result ~= nil then
+        return result
+    else
+        table[key] = value
+        return value
+    end
+end
+
+local function table_get_or_init_table(table, key)
+    local result = table[key]
+
+    if result == nil then
+        result = {}
+        table[key] = {}
+    end
+
+    return result
 end
 
 rtable = rtable or {}
 rtable.shuffle = shuffle
 rtable.table_get_or_init = table_get_or_init
+rtable.table_get_or_init_f = table_get_or_init_f
+rtable.table_get_or_init_table = table_get_or_init_table
+rtable.make = function() return {} end

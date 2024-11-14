@@ -10,6 +10,10 @@ local function do_part(name, part)
         assert(module)
         return module
     else
+        if string.match(module, "module " .. full_name .. " not found") ~= nil then
+            assert(false, module)
+        end
+
         return nil
     end
 end

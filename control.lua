@@ -1,3 +1,5 @@
+require("util.table")
+
 function do_unlocks2(unlocks_map, technologies, technology)
     technology.researched = true
 
@@ -62,37 +64,67 @@ function add_starter_items(player)
 end
 
 local event_table = {}
+local setup_table = {}
 
-local development_do_init = true;
+local function add_setup(name, f)
+    setup_table[name] = f
+end
+
+local do_setup = true
+local development_do_init = true
+
+local function run_setup()
+    if do_setup then
+        d_setup = false
+        for _, f in pairs(setup_table) do
+            f()
+        end
+    end
+end
 
 local function add_on_event(name, events, f)
     local function do_event(event)
         if event_table[event] == nil then
             event_table[event] = {}
 
-            if development_mode and event == defines.events.on_tick then
-                script.on_event(event, function(e)
-                    if development_do_init then
-                        development_do_init = false
-                        for _, callback in pairs(event_table["on_init"]) do
-                            callback()
-                        end
+            if event == defines.events.on_tick then
+                if development_mode then
+                    script.on_event(event, function(e)
+                        if development_do_init then
+                            development_do_init = false
+                            for _, callback in pairs(event_table["on_init"]) do
+                                callback()
+                            end
 
-                        for _, callback in pairs(event_table[defines.events.on_surface_created]) do
-                            for _, surface in pairs(game.surfaces) do
-                                callback {
-                                    surface_index = surface.index,
-                                    name = defines.events.on_surface_created,
-                                    tick = 0,
-                                }
+                            local callbacks = event_table[defines.events.on_surface_created]
+                            if callbacks ~= nil then
+                                for _, callback in pairs(callbacks) do
+                                    for _, surface in pairs(game.surfaces) do
+                                        callback {
+                                            surface_index = surface.index,
+                                            name = defines.events.on_surface_created,
+                                            tick = 0,
+                                        }
+                                    end
+                                end
                             end
                         end
-                    end
 
-                    for _, callback in pairs(event_table[event]) do
-                        callback(e)
-                    end
-                end)
+                        run_setup()
+
+                        for _, callback in pairs(event_table[event]) do
+                            callback(e)
+                        end
+                    end)
+                else
+                    script.on_event(event, function(e)
+                        run_setup()
+
+                        for _, callback in pairs(event_table[event]) do
+                            callback(e)
+                        end
+                    end)
+                end
             else
                 script.on_event(event, function(e)
                     for _, callback in pairs(event_table[event]) do
@@ -153,10 +185,73 @@ local function add_on_init(name, f)
 end
 
 
+local function init_entity_storage()
+    return { surfaces = {}, names = {} }
+end
+
+local storage_entity_tracking_table = nil
+
+add_on_init(
+    "init storage entity tracking table reference",
+    function()
+        storage_entity_tracking_table = rtable.table_get_or_init_f(storage, "entity_tracking_table", rtable.make)
+    end)
+
+local function get_track_entities_storage(entity_type)
+    return rtable.table_get_or_init_f(storage_entity_tracking_table, entity_type, init_entity_storage)
+end
+
+local function stop_track_entities_storage(entity_type)
+    storage_entity_tracking_table[entity_type] = nil
+end
+
+local function lookup_track_entities_table(entity_type)
+    return storage_entity_tracking_table[entity_type]
+end
+
+local function track_entities(name, entity_type)
+    local tracking_storage = get_track_entities_storage(entity_type)
+    tracking_storage.names[name] = true
+    return tracking_storage.surfaces
+end
+
+local function stop_track_entities(name, entity_type)
+    local tracking_storage = get_track_entities_storage(entity_type)
+    tracking_storage.names[name] = nil
+
+    if #tracking_storage.names == 0 then
+        stop_track_entities_storage(entity_type)
+    end
+end
+
+
 rework_control = {
     on_event = add_on_event,
     on_init = add_on_init,
+    track_entities = track_entities,
+    stop_track_entities = stop_track_entities,
+    add_setup = add_setup,
 }
+
+rework_control.on_event(
+    "track entities",
+    { defines.events.on_built_entity, defines.events.on_robot_built_entity },
+    function(event)
+        local entity = event.entity
+        local tracking = lookup_track_entities_table(entity.name)
+        if tracking ~= nil then
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rtable.make)
+            entities_table[entity.unit_number] = entity
+        end
+    end)
+
+rework_control.on_event(
+    "track entities",
+    { defines.events.on_entity_died },
+    function(event)
+        a = 1
+        -- entity_tracking_table()[event.entity.name][event.entity.unit_number] = nil
+    end)
 
 -- rework_control.on_event(
 --     "set player stats",
