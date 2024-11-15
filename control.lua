@@ -1,4 +1,6 @@
 require("util.table")
+require("util.vector")
+require("util")
 
 function do_unlocks2(unlocks_map, technologies, technology)
     technology.researched = true
@@ -75,7 +77,7 @@ local development_do_init = true
 
 local function run_setup()
     if do_setup then
-        d_setup = false
+        do_setup = false
         for _, f in pairs(setup_table) do
             f()
         end
@@ -190,11 +192,13 @@ local function init_entity_storage()
 end
 
 local storage_entity_tracking_table = nil
+local entity_indices = nil
 
 add_on_init(
     "init storage entity tracking table reference",
     function()
         storage_entity_tracking_table = rtable.table_get_or_init_f(storage, "entity_tracking_table", rtable.make)
+        entity_indices = rtable.table_get_or_init_f(storage, "entity_indices", rtable.make)
     end)
 
 local function get_track_entities_storage(entity_type)
@@ -240,10 +244,65 @@ rework_control.on_event(
         local entity = event.entity
         local tracking = lookup_track_entities_table(entity.name)
         if tracking ~= nil then
-            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rtable.make)
-            entities_table[entity.unit_number] = entity
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+
+            local index = rvector.push_back(entities_table, entity)
+            entity_indices[entity.unit_number] = index
         end
     end)
+
+rework_control.on_event(
+    "track entities",
+    { defines.events.on_player_mined_entity, defines.events.on_robot_mined_entity, defines.events.on_entity_died },
+    function(event)
+        local entity = event.entity
+        local tracking = lookup_track_entities_table(entity.name)
+        if tracking ~= nil then
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+
+            rvector.remove(entities_table, entity_indices[entity.unit_number])
+        end
+    end)
+
+
+function validate_tracking_state()
+    local surface_storage = {}
+
+    for _, surface in pairs(game.surfaces) do
+        surface_storage[surface.index] = rvector.make()
+    end
+
+    for key, entity_storage in pairs(storage_entity_tracking_table) do
+        if next(entity_storage.names) == nil then
+            storage_entity_tracking_table[key] = nil
+        else
+            entity_storage.surfaces = util.table.deepcopy(surface_storage)
+        end
+    end
+
+    for _, surface in pairs(game.surfaces) do
+        for entity_type, entity_storage in pairs(storage_entity_tracking_table) do
+            local entities = surface.find_entities_filtered { name = entity_type }
+
+            local entities_storage = entity_storage.surfaces[surface.index]
+            for _, entity in pairs(entities) do
+                rvector.push_back(entities_storage, entity)
+            end
+        end
+    end
+    a = 1
+end
+
+function clear_state()
+    validate_tracking_state()
+    -- for k1, tracking in pairs(storage_entity_tracking_table) do
+    --     for k2, _ in pairs(tracking.surfaces) do
+    --         storage_entity_tracking_table[k1].surfaces[k2] = rvector.make()
+    --     end
+    -- end
+end
+
+rework_control.add_setup("validate tracking state", validate_tracking_state)
 
 rework_control.on_event(
     "track entities",
@@ -294,3 +353,10 @@ rework_control.on_event(
     end)
 
 require("prototypes-list").do_control()
+
+rework_control.on_event(
+    "run reset test",
+    "run-reset-test",
+    function(event)
+        clear_state()
+    end)

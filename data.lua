@@ -199,5 +199,11 @@ data:extend({
         name = "reload-script-controls",
         key_sequence = "F7",
         consuming = "game-only",
+    },
+    {
+        type = "custom-input",
+        name = "run-reset-test",
+        key_sequence = "F8",
+        consuming = "game-only",
     }
 })

@@ -8,20 +8,6 @@ local dimensional_receiver_table = nil
 local dimensional_accumulator_table = nil
 local ghosts_table = nil
 
-local function process_dimensional_accumulator(entity)
-    if entity.energy >= 5000000000 then
-        entity.energy = 0
-        return true
-    else
-        entity.energy = 0
-        return false
-    end
-end
-
-local function process_dimensional_receiver(entity)
-    return entity.energy >= entity.power_usage
-end
-
 rework_control.add_setup(
     "dimensional receivers",
     function()
@@ -39,49 +25,78 @@ rework_control.on_event(
 
         local accumulator_charged = false
 
-        for surface_index, accumulators in pairs(dimensional_accumulator_table) do
-            for key, accumulator in pairs(accumulators) do
-                if accumulator.valid then
-                    if process_dimensional_accumulator(accumulator) then
-                        accumulator_charged = true
-                    end
-                else
-                    accumulators[key] = nil
+        local process_dimensional_accumulator = function(accumulator)
+            if accumulator.valid then
+                if accumulator.energy >= 5000000000 then
+                    accumulator_charged = true
                 end
+                accumulator_charged = true
+
+                accumulator.energy = 0
+                return true
+            else
+                return false
             end
         end
 
+        for surface_index, accumulators in pairs(dimensional_accumulator_table) do
+            rvector.filter(accumulators, process_dimensional_accumulator)
+        end
+
+
         if accumulator_charged then
-            for surface_index, receivers in pairs(dimensional_receiver_table) do
-                for key, receiver in pairs(receivers) do
-                    if receiver.valid then
-                        if process_dimensional_receiver(receiver) then
-                            powered_surfaces[surface_index] = true
-                        end
-                    else
-                        receivers[key] = nil
+            local process_dimensional_receiver = function(receiver)
+                if receiver.valid then
+                    if receiver.energy >= receiver.power_usage then
+                        powered_surfaces[receiver.surface_index] = true
                     end
+                    return true
+                else
+                    return false
                 end
             end
 
+            for surface_index, receivers in pairs(dimensional_receiver_table) do
+                rvector.filter(receivers, process_dimensional_receiver)
+            end
+
             for surface_index, ghosts in pairs(ghosts_table) do
-                if powered_surfaces[surface_index] ~= nil then
-                    for key, ghost in pairs(ghosts) do
+                if powered_surfaces[surface_index] ~= nil and ghosts.end_index ~= 0 then
+                    local end_index = ghosts.end_index
+                    local current_index = (ghosts.current_index or 0) % end_index
+                    local elements = ghosts.elements
+
+                    local count = math.min(end_index - 1, 10)
+
+                    for i = 0, count do
+                        local ghost = elements[current_index]
+
                         if ghost.valid then
                             local entity_position = ghost.position
                             local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
                             local collisions, created_entity, item_request_proxy = ghost.revive()
                             if created_entity ~= nil then
                                 game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
-                                goto stop
+
+                                end_index = end_index - 1
+                                elements[i] = elements[end_index]
+                                elements[end_index] = nil
+                            else
+                                current_index = current_index + 1
                             end
                         else
-                            ghosts[key] = nil
+                            end_index = end_index - 1
+                            elements[i] = elements[end_index]
+                            elements[end_index] = nil
                         end
+
+                        current_index = current_index % end_index
                     end
+
+                    ghosts.end_index = end_index
+                    ghosts.current_index = current_index
                 end
             end
         end
-        ::stop::
     end
 )
