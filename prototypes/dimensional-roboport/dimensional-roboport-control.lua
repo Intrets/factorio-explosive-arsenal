@@ -17,15 +17,48 @@ rework_control.add_setup(
     end
 )
 
+local gui = nil
+local gui_value = nil
+
 rework_control.on_event(
     "dimensional roboport testing",
     defines.events.on_tick,
     function(event)
+        -- local player = game.players[1]
+        -- if gui == nil then
+        --     if player.gui.screen["test"] ~= nil then
+        --         gui = player.gui.screen["test"]
+        --         gui_value = gui["test-value"]
+        --     else
+        --         gui = player.gui.screen.add {
+        --             type = "frame",
+        --             name = "test",
+        --             direction = "vertical",
+        --             caption = "hello",
+        --         }
+        --         gui_value = gui.add {
+        --             type = "label",
+        --             name = "test-value",
+        --             caption = "0",
+        --         }
+        --     end
+        -- end
+
+        -- local invalids = 0
+        -- for _, ghost in pairs(ghosts_table[1].elements) do
+        --     if not ghost[1].valid then
+        --         invalids = invalids + 1
+        --     end
+        -- end
+
+        -- gui_value.caption = "" .. ghosts_table[1].end_index .. ", " .. invalids
+
         local powered_surfaces = {}
 
         local accumulator_charged = false
 
-        local process_dimensional_accumulator = function(accumulator)
+        local process_dimensional_accumulator = function(accumulator_info)
+            local accumulator = accumulator_info[1]
             if accumulator.valid then
                 if accumulator.energy >= 5000000000 then
                     accumulator_charged = true
@@ -45,7 +78,8 @@ rework_control.on_event(
 
 
         if accumulator_charged then
-            local process_dimensional_receiver = function(receiver)
+            local process_dimensional_receiver = function(receiver_info)
+                local receiver = receiver_info[1]
                 if receiver.valid then
                     if receiver.energy >= receiver.power_usage then
                         powered_surfaces[receiver.surface_index] = true
@@ -61,40 +95,43 @@ rework_control.on_event(
             end
 
             for surface_index, ghosts in pairs(ghosts_table) do
-                if powered_surfaces[surface_index] ~= nil and ghosts.end_index ~= 0 then
-                    local end_index = ghosts.end_index
-                    local current_index = (ghosts.current_index or 0) % end_index
-                    local elements = ghosts.elements
+                local end_index = ghosts.end_index
+                if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
+                    local spawn_chances = 10
+                    local spawns = 1
 
-                    local count = math.min(end_index - 1, 10)
+                    for i = 1, 100 do
+                        local current_index = (ghosts.current_index or 0) % end_index
 
-                    for i = 0, count do
-                        local ghost = elements[current_index]
+                        local ghost_info = ghosts.elements[current_index]
 
-                        if ghost.valid then
-                            local entity_position = ghost.position
-                            local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
-                            local collisions, created_entity, item_request_proxy = ghost.revive()
-                            if created_entity ~= nil then
-                                game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
+                        if ghost_info ~= nil then
+                            local ghost = ghost_info[1]
 
-                                end_index = end_index - 1
-                                elements[i] = elements[end_index]
-                                elements[end_index] = nil
+                            if ghost.valid then
+                                local entity_position = ghost.position
+                                local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
+                                local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
+                                if created_entity ~= nil then
+                                    game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
+                                    rework_control.remove_by_index(ghosts, current_index)
+                                    spawns = spawns - 1
+                                    if spawns == 0 then
+                                        break
+                                    end
+                                end
+
+                                spawn_chances = spawn_chances - 1
+                                if spawn_chances == 0 then
+                                    break
+                                end
                             else
-                                current_index = current_index + 1
+                                rework_control.remove_by_index(ghosts, current_index)
                             end
-                        else
-                            end_index = end_index - 1
-                            elements[i] = elements[end_index]
-                            elements[end_index] = nil
                         end
 
-                        current_index = current_index % end_index
+                        ghosts.current_index = current_index + 1
                     end
-
-                    ghosts.end_index = end_index
-                    ghosts.current_index = current_index
                 end
             end
         end

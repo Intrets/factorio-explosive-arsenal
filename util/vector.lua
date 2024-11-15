@@ -46,14 +46,20 @@ local function is_empty(vector)
     return vector.end_index == 0
 end
 
+-- returns the moved element or nil if nothing was moved
 local function remove(vector, index)
     vector.end_index = vector.end_index - 1
 
+    local result = nil
+
     if index ~= vector.end_index then
-        vector.elements[index] = vector.elements[vector.end_index]
+        result = vector.elements[vector.end_index]
+        vector.elements[index] = result
     end
 
     vector.elements[vector.end_index] = nil
+
+    return result
 end
 
 local function filter(vector, f)

@@ -33,7 +33,7 @@ data:extend({
         place_result = "dimensional-receiver",
         stack_size = 20,
         default_import_location = "fulgora",
-        random_tint_color = item_tints.iron_rust
+        random_tint_color = item_tints.iron_rust,
     },
     {
         type = "electric-energy-interface",
@@ -56,7 +56,7 @@ data:extend({
             input_flow_limit = "1500MW",
         },
         energy_usage = "1000MW",
-        picture = rpicture.load_picture("dimensional-receiver", "sprite")
+        picture = rpicture.load_picture("dimensional-receiver", "sprite"),
     },
 })
 

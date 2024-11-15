@@ -228,6 +228,36 @@ local function stop_track_entities(name, entity_type)
     end
 end
 
+local function force_remove_entity(entity)
+    local tracking_storage = get_track_entities_storage(entity.name)
+    local surface_storage = tracking_storage.surfaces[entity.surface_index]
+    local index = entity_indices[entity.unit_number]
+    entity_indices[entity.unit_number] = nil
+
+    local moved = rvector.remove(surface_storage, index)
+    if moved ~= nil then
+        entity_indices[moved.unit_number] = index
+    end
+end
+
+local function force_insert_entity(entity)
+    local tracking_storage = get_track_entities_storage(entity.name)
+    local surface_storage = tracking_storage.surfaces[entity.surface_index]
+    local index = rvector.push_back(surface_storage, { entity, entity.unit_number })
+    entity_indices[entity.unit_number] = index
+end
+
+local function remove_by_index(entities_table, index)
+    local entity_info = entities_table.elements[index]
+    local unit_number = entity_info[2]
+
+    local moved = rvector.remove(entities_table, index)
+    if moved ~= nil then
+        entity_indices[moved[2]] = index
+    end
+
+    entity_indices[unit_number] = nil
+end
 
 rework_control = {
     on_event = add_on_event,
@@ -235,20 +265,46 @@ rework_control = {
     track_entities = track_entities,
     stop_track_entities = stop_track_entities,
     add_setup = add_setup,
+    force_remove_entity = force_remove_entity,
+    force_insert_entity = force_insert_entity,
+    remove_by_index = remove_by_index,
 }
+
+local function register_entity(entity)
+    local tracking = lookup_track_entities_table(entity.name)
+    if tracking ~= nil then
+        local unit_number = entity.unit_number
+        if entity_indices[unit_number] == nil then
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+
+            local index = rvector.push_back(entities_table, { entity, entity.unit_number })
+            entity_indices[unit_number] = index
+        end
+    end
+end
+
+local function unregister_entity(entity)
+    local tracking = lookup_track_entities_table(entity.name)
+    if tracking ~= nil then
+        local unit_number = entity.unit_number
+        local index = entity_indices[unit_number]
+        if index ~= nil then
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+
+            local moved = rvector.remove(entities_table, index)
+            if moved ~= nil then
+                entity_indices[moved[2]] = index
+            end
+        end
+    end
+end
 
 rework_control.on_event(
     "track entities",
-    { defines.events.on_built_entity, defines.events.on_robot_built_entity },
+    { defines.events.on_built_entity, defines.events.on_robot_built_entity, defines.events.script_raised_revive },
     function(event)
         local entity = event.entity
-        local tracking = lookup_track_entities_table(entity.name)
-        if tracking ~= nil then
-            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
-
-            local index = rvector.push_back(entities_table, entity)
-            entity_indices[entity.unit_number] = index
-        end
+        register_entity(entity)
     end)
 
 rework_control.on_event(
@@ -256,17 +312,22 @@ rework_control.on_event(
     { defines.events.on_player_mined_entity, defines.events.on_robot_mined_entity, defines.events.on_entity_died },
     function(event)
         local entity = event.entity
-        local tracking = lookup_track_entities_table(entity.name)
-        if tracking ~= nil then
-            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+        unregister_entity(entity)
+    end)
 
-            rvector.remove(entities_table, entity_indices[entity.unit_number])
-        end
+rework_control.on_event(
+    "track entities",
+    { defines.events.on_pre_ghost_deconstructed },
+    function(event)
+        local entity = event.ghost
+        unregister_entity(entity)
     end)
 
 
 function validate_tracking_state()
     local surface_storage = {}
+    storage.entity_indices = {}
+    entity_indices = storage.entity_indices
 
     for _, surface in pairs(game.surfaces) do
         surface_storage[surface.index] = rvector.make()
@@ -286,11 +347,11 @@ function validate_tracking_state()
 
             local entities_storage = entity_storage.surfaces[surface.index]
             for _, entity in pairs(entities) do
-                rvector.push_back(entities_storage, entity)
+                local index = rvector.push_back(entities_storage, { entity, entity.unit_number })
+                entity_indices[entity.unit_number] = index
             end
         end
     end
-    a = 1
 end
 
 function clear_state()
@@ -304,13 +365,13 @@ end
 
 rework_control.add_setup("validate tracking state", validate_tracking_state)
 
-rework_control.on_event(
-    "track entities",
-    { defines.events.on_entity_died },
-    function(event)
-        a = 1
-        -- entity_tracking_table()[event.entity.name][event.entity.unit_number] = nil
-    end)
+-- rework_control.on_event(
+--     "track entities",
+--     { defines.events.on_entity_died },
+--     function(event)
+--         a = 1
+--         -- entity_tracking_table()[event.entity.name][event.entity.unit_number] = nil
+--     end)
 
 -- rework_control.on_event(
 --     "set player stats",
@@ -346,6 +407,13 @@ rework_control.on_event(
     end)
 
 rework_control.on_event(
+    "ghost workaround",
+    defines.events.on_script_trigger_effect,
+    function(event)
+        register_entity(event.cause_entity)
+    end)
+
+rework_control.on_event(
     "reload script controls",
     "reload-script-controls",
     function(event)
@@ -360,3 +428,5 @@ rework_control.on_event(
     function(event)
         clear_state()
     end)
+
+-- require("catching_all_events")

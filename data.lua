@@ -14,6 +14,22 @@ require("prototypes.concrete-fluid")
 
 require("prototypes-list").do_data()
 
+data.raw["entity-ghost"]["entity-ghost"].created_effect =
+{
+    type = "direct",
+    action_delivery =
+    {
+        type = "instant",
+        target_effects =
+        {
+            {
+                type = "script",
+                effect_id = "workaround-ghost-built",
+            },
+        }
+    }
+}
+
 data:extend({
     {
         type = "surface-property",
