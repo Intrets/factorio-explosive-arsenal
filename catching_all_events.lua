@@ -216,9 +216,16 @@ local debug_string = ""
 
 for _, event_index in pairs(defines.events) do
     rework_control.on_event("catching all events", event_index, function(event)
+        if event_index == defines.events.on_pre_build then
+            a = 1
+        end
         if not filtered_events[event_index] then
             local name = names[event_index]
-            debug_string = debug_string .. name .. ", "
+            if #name == 0 then
+                debug_string = debug_string .. "UNKNOWN" .. ", "
+            else
+                debug_string = debug_string .. name .. ", "
+            end
         end
     end)
 end

@@ -7,6 +7,7 @@ local dimensional_builder_range = 30
 local dimensional_receiver_table = nil
 local dimensional_accumulator_table = nil
 local ghosts_table = nil
+local item_request_proxy_table = nil
 
 rework_control.add_setup(
     "dimensional receivers",
@@ -14,11 +15,43 @@ rework_control.add_setup(
         dimensional_receiver_table = rework_control.track_entities("dimensional receivers", "dimensional-receiver")
         dimensional_accumulator_table = rework_control.track_entities("dimensional accumulators", "dimensional-accumulator")
         ghosts_table = rework_control.track_entities("ghosts", "entity-ghost")
+        item_request_proxy_table = rework_control.track_entities("request proxies", "item-request-proxy", true)
     end
 )
 
 local gui = nil
 local gui_value = nil
+local redo_count = nil
+local undo_count = nil
+
+function add_test_label(gui, name, initial_value)
+    local element = gui[name]
+
+    if element == nil then
+        element = gui.add {
+            type = "label",
+            name = name,
+            label = initial_value
+        }
+    end
+
+    return element
+end
+
+function add_test_frame(gui, name)
+    local element = gui[name]
+
+    if element == nil then
+        element = gui.add {
+            type = "frame",
+            name = name,
+            direction = "vertical",
+            caption = name
+        }
+    end
+
+    return element
+end
 
 rework_control.on_event(
     "dimensional roboport testing",
@@ -26,22 +59,11 @@ rework_control.on_event(
     function(event)
         -- local player = game.players[1]
         -- if gui == nil then
-        --     if player.gui.screen["test"] ~= nil then
-        --         gui = player.gui.screen["test"]
-        --         gui_value = gui["test-value"]
-        --     else
-        --         gui = player.gui.screen.add {
-        --             type = "frame",
-        --             name = "test",
-        --             direction = "vertical",
-        --             caption = "hello",
-        --         }
-        --         gui_value = gui.add {
-        --             type = "label",
-        --             name = "test-value",
-        --             caption = "0",
-        --         }
-        --     end
+        --     local screen = player.gui.screen
+        --     gui = add_test_frame(screen, "test")
+        --     gui_value = add_test_label(gui, "test-value", "0")
+        --     redo_count = add_test_label(gui, "red_count", "0")
+        --     undo_count = add_test_label(gui, "undo_count", "0")
         -- end
 
         -- local invalids = 0
@@ -52,10 +74,20 @@ rework_control.on_event(
         -- end
 
         -- gui_value.caption = "" .. ghosts_table[1].end_index .. ", " .. invalids
+        -- redo_count.caption = "123"
+        -- undo_count.caption = "123"
+
+        -- redo_count.caption = "redo: " .. player.undo_redo_stack.get_redo_item_count()
+        -- undo_count.caption = "undo: " .. player.undo_redo_stack.get_undo_item_count()
+        -- -- local test1 = player.undo_redo_stack.get_redo_item(1)
+        -- local test2 = player.undo_redo_stack.get_undo_item(1)
 
         local powered_surfaces = {}
 
         local accumulator_charged = false
+
+        -- local proxies = game.surfaces[1].find_entities_filtered{name = "item-request-proxy"}
+        a=1
 
         local process_dimensional_accumulator = function(accumulator_info)
             local accumulator = accumulator_info[1]

@@ -186,19 +186,20 @@ local function add_on_init(name, f)
     event_table[event][name] = f
 end
 
-
 local function init_entity_storage()
-    return { surfaces = {}, names = {} }
+    return { surfaces = {}, names = {}, register_on_destroy = false }
 end
 
 local storage_entity_tracking_table = nil
 local entity_indices = nil
+local on_destroy_registrations = nil
 
 add_on_init(
     "init storage entity tracking table reference",
     function()
         storage_entity_tracking_table = rtable.table_get_or_init_f(storage, "entity_tracking_table", rtable.make)
         entity_indices = rtable.table_get_or_init_f(storage, "entity_indices", rtable.make)
+        on_destroy_registrations = rtable.table_get_or_init_f(storage, "on_destroy_registrations", rtable.make)
     end)
 
 local function get_track_entities_storage(entity_type)
@@ -213,9 +214,10 @@ local function lookup_track_entities_table(entity_type)
     return storage_entity_tracking_table[entity_type]
 end
 
-local function track_entities(name, entity_type)
+local function track_entities(name, entity_type, register_on_destroy)
     local tracking_storage = get_track_entities_storage(entity_type)
     tracking_storage.names[name] = true
+    tracking_storage.register_on_destroy = register_on_destroy or false
     return tracking_storage.surfaces
 end
 
@@ -234,7 +236,7 @@ local function remove_by_index(entities_table, index)
 
     local moved = rvector.remove(entities_table, index)
     if moved ~= nil then
-        entity_indices[moved[2]] = index
+        entity_indices[moved[2]][1] = index
     end
 
     entity_indices[unit_number] = nil
@@ -257,27 +259,45 @@ local function register_entity(entity)
             local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
 
             local index = rvector.push_back(entities_table, { entity, entity.unit_number })
-            entity_indices[unit_number] = index
+            entity_indices[unit_number] = { index, entity.surface_index }
             entities_table.current_index = entities_table.end_index - 1
+
+            if tracking.register_on_destroy then
+                local registration_number, _, _ = script.register_on_object_destroyed(entity)
+                on_destroy_registrations[registration_number] = { entity.name, entity.unit_number }
+            end
+        end
+    end
+end
+
+local function unregister_entity_type_unit_number(entity_type, unit_number)
+    local index_info = entity_indices[unit_number]
+
+    if index_info ~= nil then
+        entity_indices[unit_number] = nil
+
+        local tracking = lookup_track_entities_table(entity_type)
+
+        if tracking ~= nil then
+            if index_info ~= nil then
+                local index = index_info[1]
+                local surface_index = index_info[2]
+
+                local entities_table = rtable.table_get_or_init_f(tracking.surfaces, surface_index, rvector.make)
+
+                local moved = rvector.remove(entities_table, index)
+                if moved ~= nil then
+                    entity_indices[moved[2]][1] = index
+                end
+            end
         end
     end
 end
 
 local function unregister_entity(entity)
-    local tracking = lookup_track_entities_table(entity.name)
-    if tracking ~= nil then
-        local unit_number = entity.unit_number
-        local index = entity_indices[unit_number]
-        if index ~= nil then
-            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
-
-            local moved = rvector.remove(entities_table, index)
-            if moved ~= nil then
-                entity_indices[moved[2]] = index
-            end
-        end
-    end
+    unregister_entity_type_unit_number(entity.name, entity.unit_number)
 end
+
 
 rework_control.on_event(
     "track entities",
@@ -302,6 +322,28 @@ rework_control.on_event(
         local entity = event.ghost
         unregister_entity(entity)
     end)
+
+rework_control.on_event(
+    "track entities",
+    { defines.events.on_object_destroyed },
+    function(event)
+        local registration_number = event.registration_number
+
+        local registration_info = on_destroy_registrations[registration_number]
+
+        if registration_info ~= nil then
+            local entity_type = registration_info[1]
+            local unit_number = registration_info[2]
+
+            unregister_entity_type_unit_number(entity_type, unit_number)
+
+            on_destroy_registrations[registration_number] = nil
+        end
+        a = 1
+        -- local entity = event.ghost
+        -- unregister_entity(entity)
+    end)
+
 
 
 function validate_tracking_state()
@@ -328,7 +370,7 @@ function validate_tracking_state()
             local entities_storage = entity_storage.surfaces[surface.index]
             for _, entity in pairs(entities) do
                 local index = rvector.push_back(entities_storage, { entity, entity.unit_number })
-                entity_indices[entity.unit_number] = index
+                entity_indices[entity.unit_number] = { index, entity.surface_index }
             end
         end
     end
