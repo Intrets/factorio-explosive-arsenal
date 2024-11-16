@@ -100,37 +100,61 @@ rework_control.on_event(
                     local spawn_chances = 10
                     local spawns = 1
 
-                    for i = 1, 100 do
-                        local current_index = (ghosts.current_index or 0) % end_index
+                    local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
 
-                        local ghost_info = ghosts.elements[current_index]
+                    if logistic_network ~= nil then
+                        for i = 1, 100 do
+                            local current_index = (ghosts.current_index or 0) % end_index
 
-                        if ghost_info ~= nil then
-                            local ghost = ghost_info[1]
+                            local ghost_info = ghosts.elements[current_index]
 
-                            if ghost.valid then
-                                local entity_position = ghost.position
-                                local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
-                                local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
-                                if created_entity ~= nil then
-                                    game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
-                                    rework_control.remove_by_index(ghosts, current_index)
-                                    spawns = spawns - 1
-                                    if spawns == 0 then
-                                        break
+                            if ghost_info ~= nil then
+                                local ghost = ghost_info[1]
+
+
+                                if ghost.valid then
+                                    local items = ghost.ghost_prototype.items_to_place_this
+
+                                    for _, _item in pairs(items) do
+                                        local item = { name = _item.name, count = 1, quality = ghost.quality }
+
+                                        local result = logistic_network.get_item_count(item)
+                                        if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
+                                            local entity_position = ghost.position
+                                            local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
+                                            local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
+                                            if created_entity ~= nil then
+                                                game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
+                                                rework_control.remove_by_index(ghosts, current_index)
+                                                spawns = spawns - 1
+                                                if spawns == 0 then
+                                                    goto stop
+                                                end
+                                            end
+
+                                            spawn_chances = spawn_chances - 1
+                                            if spawn_chances == 0 then
+                                                goto stop
+                                            end
+
+                                            break
+                                        end
                                     end
-                                end
 
-                                spawn_chances = spawn_chances - 1
-                                if spawn_chances == 0 then
-                                    break
+                                    spawn_chances = spawn_chances - 1
+                                    if spawn_chances == 0 then
+                                        goto stop
+                                    end
+
+                                    ghosts.current_index = current_index - 1
+                                else
+                                    rework_control.remove_by_index(ghosts, current_index)
                                 end
-                            else
-                                rework_control.remove_by_index(ghosts, current_index)
                             end
-                        end
 
-                        ghosts.current_index = current_index - 1
+                            ghosts.current_index = current_index - 1
+                        end
+                        ::stop::
                     end
                 end
             end
