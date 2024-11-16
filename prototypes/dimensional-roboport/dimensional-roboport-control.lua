@@ -130,7 +130,7 @@ rework_control.on_event(
                             end
                         end
 
-                        ghosts.current_index = current_index + 1
+                        ghosts.current_index = current_index - 1
                     end
                 end
             end

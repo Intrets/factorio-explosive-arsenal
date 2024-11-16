@@ -228,25 +228,6 @@ local function stop_track_entities(name, entity_type)
     end
 end
 
-local function force_remove_entity(entity)
-    local tracking_storage = get_track_entities_storage(entity.name)
-    local surface_storage = tracking_storage.surfaces[entity.surface_index]
-    local index = entity_indices[entity.unit_number]
-    entity_indices[entity.unit_number] = nil
-
-    local moved = rvector.remove(surface_storage, index)
-    if moved ~= nil then
-        entity_indices[moved.unit_number] = index
-    end
-end
-
-local function force_insert_entity(entity)
-    local tracking_storage = get_track_entities_storage(entity.name)
-    local surface_storage = tracking_storage.surfaces[entity.surface_index]
-    local index = rvector.push_back(surface_storage, { entity, entity.unit_number })
-    entity_indices[entity.unit_number] = index
-end
-
 local function remove_by_index(entities_table, index)
     local entity_info = entities_table.elements[index]
     local unit_number = entity_info[2]
@@ -265,8 +246,6 @@ rework_control = {
     track_entities = track_entities,
     stop_track_entities = stop_track_entities,
     add_setup = add_setup,
-    force_remove_entity = force_remove_entity,
-    force_insert_entity = force_insert_entity,
     remove_by_index = remove_by_index,
 }
 
@@ -279,6 +258,7 @@ local function register_entity(entity)
 
             local index = rvector.push_back(entities_table, { entity, entity.unit_number })
             entity_indices[unit_number] = index
+            entities_table.current_index = entities_table.end_index - 1
         end
     end
 end
