@@ -14,37 +14,37 @@ require("prototypes.concrete-fluid")
 
 require("prototypes-list").do_data()
 
-data.raw["entity-ghost"]["entity-ghost"].created_effect =
-{
-    type = "direct",
-    action_delivery =
+table.insert(data.raw["entity-ghost"]["entity-ghost"].created_effect,
     {
-        type = "instant",
-        target_effects =
+        type = "direct",
+        action_delivery =
         {
+            type = "instant",
+            target_effects =
             {
-                type = "script",
-                effect_id = "workaround-ghost-built",
-            },
+                {
+                    type = "script",
+                    effect_id = "workaround-ghost-built",
+                },
+            }
         }
-    }
-}
+    })
 
-data.raw["item-request-proxy"]["item-request-proxy"].created_effect =
-{
-    type = "direct",
-    action_delivery =
+table.insert(data.raw["item-request-proxy"]["item-request-proxy"].created_effect,
     {
-        type = "instant",
-        target_effects =
+        type = "direct",
+        action_delivery =
         {
+            type = "instant",
+            target_effects =
             {
-                type = "script",
-                effect_id = "workaround-ghost-built",
-            },
+                {
+                    type = "script",
+                    effect_id = "workaround-ghost-built",
+                },
+            }
         }
-    }
-}
+    })
 
 data:extend({
     {
@@ -236,6 +236,12 @@ data:extend({
         type = "custom-input",
         name = "run-reset-test",
         key_sequence = "F8",
+        consuming = "game-only",
+    },
+    {
+        type = "custom-input",
+        name = "toggle-debug-catch-all-events",
+        key_sequence = "F10",
         consuming = "game-only",
     }
 })

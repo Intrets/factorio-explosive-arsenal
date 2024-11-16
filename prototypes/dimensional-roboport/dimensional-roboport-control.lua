@@ -53,6 +53,11 @@ function add_test_frame(gui, name)
     return element
 end
 
+local function play_dimensional_effect(position, surface_index)
+    local lightning_position = rmath.sub_vec2(position, rmath.vec2(0, 25))
+    game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
+end
+
 rework_control.on_event(
     "dimensional roboport testing",
     defines.events.on_tick,
@@ -86,8 +91,11 @@ rework_control.on_event(
 
         local accumulator_charged = false
 
-        -- local proxies = game.surfaces[1].find_entities_filtered{name = "item-request-proxy"}
-        a=1
+        -- local proxies = game.surfaces[1].find_entities_filtered { name = "transport-belt" }
+        -- local belt=proxies[1]
+        -- local position_test =  belt.position
+        -- local test = game.surfaces[1].find_entities_filtered{area = rmath.bounding_box_from_position_and_size(position_test, rmath.vec2(5,5))}
+        a = 1
 
         local process_dimensional_accumulator = function(accumulator_info)
             local accumulator = accumulator_info[1]
@@ -126,70 +134,188 @@ rework_control.on_event(
                 rvector.filter(receivers, process_dimensional_receiver)
             end
 
-            for surface_index, ghosts in pairs(ghosts_table) do
-                local end_index = ghosts.end_index
-                if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
-                    local spawn_chances = 10
-                    local spawns = 1
+            local testing = game.surfaces[1].find_entities_filtered { name = "item-request-proxy" }
+            aa = 1
+            -- if testing[1] ~= nil then
+            --     -- testing[1].insert_plan = {}
+            --     testing[1].insert_plan[1].items.in_inventory[1].count = 1
+            --     local copy = testing[1].insert_plan
+            --     copy[1].items.in_inventory[1].count = 1
+            --     testing[1].insert_plan = copy
+            --     b = 1
+        end
 
-                    local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
+        local spawns = 1
 
-                    if logistic_network ~= nil then
-                        for i = 1, 100 do
-                            local current_index = (ghosts.current_index or 0) % end_index
+        for surface_index, proxies in pairs(item_request_proxy_table) do
+            local end_index = proxies.end_index
 
-                            local ghost_info = ghosts.elements[current_index]
+            if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
+                local spawn_chances = 10
 
-                            if ghost_info ~= nil then
-                                local ghost = ghost_info[1]
+                local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
+
+                if logistic_network ~= nil then
+                    for i = 1, 100 do
+                        local current_index = (proxies.current_index or 0) % end_index
+
+                        local proxy_info = proxies.elements[current_index]
 
 
-                                if ghost.valid then
-                                    local items = ghost.ghost_prototype.items_to_place_this
+                        -- local proxy = proxies.elements[0]
 
-                                    for _, _item in pairs(items) do
-                                        local item = { name = _item.name, count = 1, quality = ghost.quality }
+                        -- if proxy ~= nil and proxy[1].valid and proxy[1].proxy_target.valid then
+                        --     local entity_target = proxy[1].proxy_target
+                        --     local insert_plans = proxy[1].insert_plan
+                        --     local insert_plan = proxy[1].insert_plan[1]
+                        --     local item = insert_plan.id
 
-                                        local result = logistic_network.get_item_count(item)
-                                        if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
-                                            local entity_position = ghost.position
-                                            local lightning_position = rmath.sub_vec2(entity_position, rmath.vec2(0, 25))
-                                            local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
-                                            if created_entity ~= nil then
-                                                game.surfaces[surface_index].create_entity { name = "lightning", position = lightning_position }
-                                                rework_control.remove_by_index(ghosts, current_index)
-                                                spawns = spawns - 1
-                                                if spawns == 0 then
+                        --     local inventory_index = insert_plan.items.in_inventory[1].inventory
+                        --     local stack_index = insert_plan.items.in_inventory[1].stack
+
+                        --     -- entity_target.get_inventory(inventory_index)[stack_index + 1].set_stack(item)
+                        -- end
+
+                        if proxy_info ~= nil then
+                            local proxy = proxy_info[1]
+
+                            if proxy.valid then
+                                local entity_target = proxy.proxy_target
+
+                                local insert_plans = proxy.insert_plan
+
+                                for insert_plan_index, insert_plan in pairs(insert_plans) do
+                                    local item = insert_plan.id
+
+                                    local available = logistic_network.get_item_count(item)
+                                    if available > 0 then
+                                        local item_inventory_positions = insert_plan.items
+
+                                        if item_inventory_positions.in_inventory ~= nil then
+                                            for index, inventory_position in pairs(item_inventory_positions.in_inventory) do
+                                                local inventory_index = inventory_position.inventory
+
+                                                -- 0 indexed: https://forums.factorio.com/viewtopic.php?f=7&t=118217
+                                                local stack_index = inventory_position.stack + 1
+
+                                                local item_count = inventory_position.count or 1
+
+                                                local item_inserted = false
+                                                local item_stack_target = entity_target.get_inventory(inventory_index)[stack_index]
+                                                if not item_stack_target.valid_for_read then -- empty stack
+                                                    item_stack_target.set_stack(item)
+                                                    item_inserted = true
+                                                else -- items in the slot
+                                                    if item_stack_target.name == item.name then
+                                                        item_stack_target.count = item_stack_target.count + 1
+                                                        item_inserted = true
+                                                    end
+                                                end
+                                                a = 1
+
+                                                if item_inserted then
+                                                    logistic_network.remove_item(item)
+
+                                                    if item_count == 1 then
+                                                        table.remove(item_inventory_positions.in_inventory, index)
+                                                        if #item_inventory_positions.in_inventory == 0 then
+                                                            table.remove(insert_plans, insert_plan_index)
+                                                        end
+                                                    else
+                                                        item_inventory_positions.in_inventory[index].count = item_count - 1
+                                                    end
+
+                                                    play_dimensional_effect(entity_target.position, surface_index)
+
+                                                    proxy.insert_plan = insert_plans
+
                                                     goto stop
                                                 end
-                                            end
 
-                                            spawn_chances = spawn_chances - 1
-                                            if spawn_chances == 0 then
-                                                goto stop
-                                            end
 
-                                            break
+                                                a = 1
+                                                -- if item_stack_target.name == item.name then
+
+                                                -- end
+
+                                                -- .set_stack(item)
+                                            end
                                         end
                                     end
-
-                                    spawn_chances = spawn_chances - 1
-                                    if spawn_chances == 0 then
-                                        goto stop
-                                    end
-
-                                    ghosts.current_index = current_index - 1
-                                else
-                                    rework_control.remove_by_index(ghosts, current_index)
                                 end
+                            else
+                                rework_control.remove_by_index(proxies, current_index)
                             end
-
-                            ghosts.current_index = current_index - 1
                         end
-                        ::stop::
+
+                        proxies.current_index = current_index - 1
                     end
+                    ::stop::
+                end
+                a = 1
+            end
+        end
+
+        for surface_index, ghosts in pairs(ghosts_table) do
+            local end_index = ghosts.end_index
+            if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
+                local spawn_chances = 10
+
+                local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
+
+                if logistic_network ~= nil then
+                    for i = 1, 100 do
+                        local current_index = (ghosts.current_index or 0) % end_index
+
+                        local ghost_info = ghosts.elements[current_index]
+
+                        if ghost_info ~= nil then
+                            local ghost = ghost_info[1]
+
+
+                            if ghost.valid then
+                                local items = ghost.ghost_prototype.items_to_place_this
+
+                                for _, _item in pairs(items) do
+                                    local item = { name = _item.name, count = 1, quality = ghost.quality }
+
+                                    local result = logistic_network.get_item_count(item)
+                                    if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
+                                        local entity_position = ghost.position
+                                        local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
+                                        if created_entity ~= nil then
+                                            play_dimensional_effect(entity_position, surface_index)
+                                            rework_control.remove_by_index(ghosts, current_index)
+                                            spawns = spawns - 1
+                                            if spawns == 0 then
+                                                goto stop
+                                            end
+                                        end
+
+                                        spawn_chances = spawn_chances - 1
+                                        if spawn_chances == 0 then
+                                            goto stop
+                                        end
+
+                                        break
+                                    end
+                                end
+
+                                spawn_chances = spawn_chances - 1
+                                if spawn_chances == 0 then
+                                    goto stop
+                                end
+
+                                ghosts.current_index = current_index - 1
+                            else
+                                rework_control.remove_by_index(ghosts, current_index)
+                            end
+                        end
+
+                        ghosts.current_index = current_index - 1
+                    end
+                    ::stop::
                 end
             end
         end
-    end
-)
+    end)

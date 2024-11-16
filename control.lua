@@ -84,6 +84,27 @@ local function run_setup()
     end
 end
 
+local function remove_on_event(name, events)
+    local function remove_event(event)
+        local event_storage = event_table[event]
+        if event_storage ~= nil then
+            event_storage[name] = nil
+            if next(event_storage) == nil then
+                event_table[event] = nil
+                script.on_event(event, nil)
+            end
+        end
+    end
+
+    if type(events) == "table" then
+        for _, event in pairs(events) do
+            remove_event(event)
+        end
+    else
+        remove_event(events)
+    end
+end
+
 local function add_on_event(name, events, f)
     local function do_event(event)
         if event_table[event] == nil then
@@ -244,6 +265,7 @@ end
 
 rework_control = {
     on_event = add_on_event,
+    remove_on_event = remove_on_event,
     on_init = add_on_init,
     track_entities = track_entities,
     stop_track_entities = stop_track_entities,
@@ -451,4 +473,4 @@ rework_control.on_event(
         clear_state()
     end)
 
--- require("catching_all_events")
+require("catching_all_events")

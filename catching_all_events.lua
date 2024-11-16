@@ -210,25 +210,11 @@ local filtered_events = {
     [defines.events.on_player_changed_position] = true,
     [defines.events.on_entity_spawned] = true,
     [defines.events.on_entity_died] = true,
+    [defines.events.on_selected_entity_changed] = true,
 }
 
 local debug_string = ""
 
-for _, event_index in pairs(defines.events) do
-    rework_control.on_event("catching all events", event_index, function(event)
-        if event_index == defines.events.on_pre_build then
-            a = 1
-        end
-        if not filtered_events[event_index] then
-            local name = names[event_index]
-            if #name == 0 then
-                debug_string = debug_string .. "UNKNOWN" .. ", "
-            else
-                debug_string = debug_string .. name .. ", "
-            end
-        end
-    end)
-end
 
 local function test()
     if #debug_string ~= 0 then
@@ -237,6 +223,49 @@ local function test()
     end
 end
 
-rework_control.on_event("catching all events", defines.events.on_tick, function(event)
-    test()
-end)
+
+local function enable_catch_all_events()
+    for _, event_index in pairs(defines.events) do
+        rework_control.on_event("catching all events", event_index, function(event)
+            if event_index == defines.events.on_pre_build then
+                a = 1
+            end
+            if not filtered_events[event_index] then
+                local name = names[event_index]
+                if #name == 0 then
+                    debug_string = debug_string .. "UNKNOWN" .. ", "
+                else
+                    debug_string = debug_string .. name .. ", "
+                end
+            end
+        end)
+    end
+
+    rework_control.on_event("catching all events", defines.events.on_tick, function(event)
+        test()
+    end)
+end
+
+local function disable_catch_all_events()
+    rework_control.remove_on_event("catching all events", defines.events.on_tick)
+    for _, event_index in pairs(defines.events) do
+        rework_control.remove_on_event("catching all events", event_index)
+    end
+end
+
+local enabled = false
+
+rework_control.on_event(
+    "run reset test",
+    "toggle-debug-catch-all-events",
+    function(event)
+        if enabled then
+            disable_catch_all_events()
+            enabled = false
+        game.print("disabled")
+        else
+            enable_catch_all_events()
+            enabled = true
+        game.print("enabled")
+        end
+    end)
