@@ -227,7 +227,7 @@ end
 local function enable_catch_all_events()
     for _, event_index in pairs(defines.events) do
         rework_control.on_event("catching all events", event_index, function(event)
-            if event_index == defines.events.on_pre_build then
+            if event_index == defines.events.on_robot_mined then
                 a = 1
             end
             if not filtered_events[event_index] then

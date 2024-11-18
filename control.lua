@@ -211,16 +211,24 @@ local function init_entity_storage()
     return { surfaces = {}, names = {}, register_on_destroy = false }
 end
 
+local function init_upgrades_tracking_storage()
+    return { surfaces = {}, names = {} }
+end
+
 local storage_entity_tracking_table = nil
 local entity_indices = nil
+local upgrades_indices = nil
 local on_destroy_registrations = nil
+local storage_upgrades_tracking_table = nil
 
 add_on_init(
     "init storage entity tracking table reference",
     function()
         storage_entity_tracking_table = rtable.table_get_or_init_f(storage, "entity_tracking_table", rtable.make)
         entity_indices = rtable.table_get_or_init_f(storage, "entity_indices", rtable.make)
+        upgrades_indices = rtable.table_get_or_init_f(storage, "upgrades_indices", rtable.make)
         on_destroy_registrations = rtable.table_get_or_init_f(storage, "on_destroy_registrations", rtable.make)
+        storage_upgrades_tracking_table = rtable.table_get_or_init_f(storage, "storage_upgrades_tracking_table", init_upgrades_tracking_storage)
     end)
 
 local function get_track_entities_storage(entity_type)
@@ -263,6 +271,51 @@ local function remove_by_index(entities_table, index)
     entity_indices[unit_number] = nil
 end
 
+local function track_upgrades(name)
+    local tracking = storage_upgrades_tracking_table
+    add_on_event("track upgrades", defines.events.on_marked_for_upgrade, function(event)
+        local entity = event.entity
+        local unit_number = entity.unit_number
+        if upgrades_indices[unit_number] == nil then
+            local entities_table = rtable.table_get_or_init_f(tracking.surfaces, entity.surface_index, rvector.make)
+
+            local index = rvector.push_back(entities_table, { entity, entity.unit_number })
+            upgrades_indices[unit_number] = { index, entity.surface_index }
+            entities_table.current_index = entities_table.end_index - 1
+        end
+    end)
+
+    add_on_event("track upgrades", defines.events.on_cancelled_upgrade, function(event)
+        local entity = event.entity
+        local unit_number = entity.unit_number
+        local index_info = entity_indices[unit_number]
+
+        if index_info ~= nil then
+            upgrades_indices[unit_number] = nil
+
+            local tracking = storage_upgrades_tracking_table
+
+            if tracking ~= nil then
+                if index_info ~= nil then
+                    local index = index_info[1]
+                    local surface_index = index_info[2]
+
+                    local entities_table = rtable.table_get_or_init_f(tracking.surfaces, surface_index, rvector.make)
+
+                    local moved = rvector.remove(entities_table, index)
+                    if moved ~= nil then
+                        upgrades_indices[moved[2]][1] = index
+                    end
+                end
+            end
+        end
+    end)
+
+    tracking.names[name] = true
+
+    return tracking.surfaces
+end
+
 rework_control = {
     on_event = add_on_event,
     remove_on_event = remove_on_event,
@@ -271,6 +324,7 @@ rework_control = {
     stop_track_entities = stop_track_entities,
     add_setup = add_setup,
     remove_by_index = remove_by_index,
+    track_upgrades = track_upgrades,
 }
 
 local function register_entity(entity)
@@ -320,7 +374,6 @@ local function unregister_entity(entity)
     unregister_entity_type_unit_number(entity.name, entity.unit_number)
 end
 
-
 rework_control.on_event(
     "track entities",
     { defines.events.on_built_entity, defines.events.on_robot_built_entity, defines.events.script_raised_revive },
@@ -361,12 +414,7 @@ rework_control.on_event(
 
             on_destroy_registrations[registration_number] = nil
         end
-        a = 1
-        -- local entity = event.ghost
-        -- unregister_entity(entity)
     end)
-
-
 
 function validate_tracking_state()
     local surface_storage = {}
@@ -400,11 +448,6 @@ end
 
 function clear_state()
     validate_tracking_state()
-    -- for k1, tracking in pairs(storage_entity_tracking_table) do
-    --     for k2, _ in pairs(tracking.surfaces) do
-    --         storage_entity_tracking_table[k1].surfaces[k2] = rvector.make()
-    --     end
-    -- end
 end
 
 rework_control.add_setup("validate tracking state", validate_tracking_state)

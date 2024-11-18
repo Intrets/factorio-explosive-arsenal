@@ -8,6 +8,9 @@ local dimensional_receiver_table = nil
 local dimensional_accumulator_table = nil
 local ghosts_table = nil
 local item_request_proxy_table = nil
+local entities_with_upgrades_table = nil
+
+local dummy = nil
 
 rework_control.add_setup(
     "dimensional receivers",
@@ -16,6 +19,10 @@ rework_control.add_setup(
         dimensional_accumulator_table = rework_control.track_entities("dimensional accumulators", "dimensional-accumulator")
         ghosts_table = rework_control.track_entities("ghosts", "entity-ghost")
         item_request_proxy_table = rework_control.track_entities("request proxies", "item-request-proxy", true)
+        entities_with_upgrades_table = rework_control.track_upgrades("upgrades")
+
+        dummy = game.surfaces[1].create_entity { name = "character", position = { 0, 0 }, force = game.players[1].force }
+        a = 1
     end
 )
 
@@ -134,7 +141,7 @@ rework_control.on_event(
                 rvector.filter(receivers, process_dimensional_receiver)
             end
 
-            local testing = game.surfaces[1].find_entities_filtered { name = "item-request-proxy" }
+            -- local testing = game.surfaces[1].find_entities_filtered { name = "item-request-proxy" }
             aa = 1
             -- if testing[1] ~= nil then
             --     -- testing[1].insert_plan = {}
@@ -146,6 +153,80 @@ rework_control.on_event(
         end
 
         local spawns = 1
+
+        for surface_index, entities_with_upgrades in pairs(entities_with_upgrades_table) do
+            local end_index = entities_with_upgrades.end_index
+
+            if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
+                local spawn_chances = 10
+
+                local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
+
+                if logistic_network ~= nil then
+                    for i = 1, 100 do
+                        local current_index = (entities_with_upgrades.current_index or 0) % end_index
+
+                        local entity_with_upgrade_info = entities_with_upgrades.elements[current_index]
+
+                        if entity_with_upgrade_info ~= nil then
+                            local entity_with_upgrade = entity_with_upgrade_info[1]
+                            if entity_with_upgrade.valid then
+                                local upgrade_target, quality = entity_with_upgrade.get_upgrade_target()
+                                if upgrade_target ~= nil then
+                                    local items = upgrade_target.items_to_place_this
+
+                                    for _, _item in pairs(items) do
+                                        local item = { name = _item.name, count = 1, quality = quality }
+
+                                        -- local result = logistic_network.get_item_count(item)
+                                        -- if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
+                                        if true then
+                                            local entity_position = entity_with_upgrade.position
+                                            -- local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
+                                            -- entity_with_upgrade.cancel_upgrade(entity_with_upgrade.force)
+                                            local result = game.surfaces[surface_index].create_entity {
+                                                name = upgrade_target.name,
+                                                position = entity_position,
+                                                quality = item.quality,
+                                                force = entity_with_upgrade.force,
+                                                fast_replace = true,
+                                                player = game.players[1],
+                                                character = dummy,
+                                            }
+                                            game.players[1].undo_redo_stack.remove_undo_action(1,3)
+                                            game.players[1].undo_redo_stack.remove_undo_action(1,2)
+                                            -- game.players[1].undo_redo_stack.remove_undo_item(2)
+                                            a = 1
+                                            local created_entity = true
+                                            if created_entity ~= nil then
+                                                play_dimensional_effect(entity_position, surface_index)
+                                                spawns = spawns - 1
+                                                if spawns == 0 then
+                                                    goto stop
+                                                end
+                                            end
+
+                                            spawn_chances = spawn_chances - 1
+                                            if spawn_chances == 0 then
+                                                goto stop
+                                            end
+
+                                            break
+                                        end
+                                    end
+                                end
+                            else
+                                -- assert(false)
+                                -- rework_control.remove_by_index(proxies, current_index)
+                            end
+                        end
+
+                        entities_with_upgrades.current_index = current_index - 1
+                    end
+                    ::stop::
+                end
+            end
+        end
 
         for surface_index, proxies in pairs(item_request_proxy_table) do
             local end_index = proxies.end_index
@@ -160,21 +241,6 @@ rework_control.on_event(
                         local current_index = (proxies.current_index or 0) % end_index
 
                         local proxy_info = proxies.elements[current_index]
-
-
-                        -- local proxy = proxies.elements[0]
-
-                        -- if proxy ~= nil and proxy[1].valid and proxy[1].proxy_target.valid then
-                        --     local entity_target = proxy[1].proxy_target
-                        --     local insert_plans = proxy[1].insert_plan
-                        --     local insert_plan = proxy[1].insert_plan[1]
-                        --     local item = insert_plan.id
-
-                        --     local inventory_index = insert_plan.items.in_inventory[1].inventory
-                        --     local stack_index = insert_plan.items.in_inventory[1].stack
-
-                        --     -- entity_target.get_inventory(inventory_index)[stack_index + 1].set_stack(item)
-                        -- end
 
                         if proxy_info ~= nil then
                             local proxy = proxy_info[1]
@@ -231,14 +297,6 @@ rework_control.on_event(
 
                                                     goto stop
                                                 end
-
-
-                                                a = 1
-                                                -- if item_stack_target.name == item.name then
-
-                                                -- end
-
-                                                -- .set_stack(item)
                                             end
                                         end
                                     end

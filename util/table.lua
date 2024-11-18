@@ -36,7 +36,7 @@ local function table_get_or_init_table(table, key)
 
     if result == nil then
         result = {}
-        table[key] = {}
+        table[key] = result 
     end
 
     return result

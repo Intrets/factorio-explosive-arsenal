@@ -14,7 +14,9 @@ require("prototypes.concrete-fluid")
 
 require("prototypes-list").do_data()
 
-table.insert(data.raw["entity-ghost"]["entity-ghost"].created_effect,
+require("util.table")
+
+table.insert(rtable.table_get_or_init_table(data.raw["entity-ghost"]["entity-ghost"], "created_effect"),
     {
         type = "direct",
         action_delivery =
@@ -30,7 +32,7 @@ table.insert(data.raw["entity-ghost"]["entity-ghost"].created_effect,
         }
     })
 
-table.insert(data.raw["item-request-proxy"]["item-request-proxy"].created_effect,
+table.insert(rtable.table_get_or_init_table(data.raw["item-request-proxy"]["item-request-proxy"], "created_effect"),
     {
         type = "direct",
         action_delivery =
