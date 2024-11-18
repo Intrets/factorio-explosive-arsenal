@@ -1,6 +1,7 @@
 local prototypes_names = {
     "dimensional-roboport",
-    "remote-charge"
+    "remote-charge",
+    "explosive-shotgun-shells",
 }
 
 local function do_part(name, part)
