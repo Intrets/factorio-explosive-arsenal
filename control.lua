@@ -271,6 +271,18 @@ local function remove_by_index(entities_table, index)
     entity_indices[unit_number] = nil
 end
 
+local function remove_upgrade_by_index(upgrades_table, index)
+    local entity_info = upgrades_table.elements[index]
+    local unit_number = entity_info[2]
+
+    local moved = rvector.remove(upgrades_table, index)
+    if moved ~= nil then
+        upgrades_indices[moved[2]][1] = index
+    end
+
+    upgrades_indices[unit_number] = nil
+end
+
 local function track_upgrades(name)
     local tracking = storage_upgrades_tracking_table
     add_on_event("track upgrades", defines.events.on_marked_for_upgrade, function(event)
@@ -288,7 +300,7 @@ local function track_upgrades(name)
     add_on_event("track upgrades", defines.events.on_cancelled_upgrade, function(event)
         local entity = event.entity
         local unit_number = entity.unit_number
-        local index_info = entity_indices[unit_number]
+        local index_info = upgrades_indices[unit_number]
 
         if index_info ~= nil then
             upgrades_indices[unit_number] = nil
@@ -325,6 +337,7 @@ rework_control = {
     add_setup = add_setup,
     remove_by_index = remove_by_index,
     track_upgrades = track_upgrades,
+    remove_upgrade_by_index = remove_upgrade_by_index,
 }
 
 local function register_entity(entity)

@@ -10,6 +10,7 @@ local ghosts_table = nil
 local item_request_proxy_table = nil
 local entities_with_upgrades_table = nil
 
+local dummy_surface = nil
 local dummy = nil
 
 rework_control.add_setup(
@@ -21,10 +22,29 @@ rework_control.add_setup(
         item_request_proxy_table = rework_control.track_entities("request proxies", "item-request-proxy", true)
         entities_with_upgrades_table = rework_control.track_upgrades("upgrades")
 
-        dummy = game.surfaces[1].create_entity { name = "character", position = { 0, 0 }, force = game.players[1].force }
-        a = 1
+        dummy_surface = game.get_surface("rework-dummy-dimension")
+        if dummy_surface == nil then
+            dummy_surface = game.create_surface("rework-dummy-dimension")
+        end
+
+        for _, force in pairs(game.forces) do
+            force.set_surface_hidden(dummy_surface, true)
+        end
+
+        local characters = dummy_surface.find_entities_filtered { name = "character" }
+        local character = characters[1]
+
+        if character == nil then
+            character = dummy_surface.create_entity { name = "character", position = { 0, 0 }, force = "player" }
+        end
+
+        dummy = character
     end
 )
+
+rework_control.on_event("hide dummy dimension", defines.events.on_force_created, function(event)
+    event.force.set_surface_hidden(dummy_surface, true)
+end)
 
 local gui = nil
 local gui_value = nil
@@ -69,40 +89,9 @@ rework_control.on_event(
     "dimensional roboport testing",
     defines.events.on_tick,
     function(event)
-        -- local player = game.players[1]
-        -- if gui == nil then
-        --     local screen = player.gui.screen
-        --     gui = add_test_frame(screen, "test")
-        --     gui_value = add_test_label(gui, "test-value", "0")
-        --     redo_count = add_test_label(gui, "red_count", "0")
-        --     undo_count = add_test_label(gui, "undo_count", "0")
-        -- end
-
-        -- local invalids = 0
-        -- for _, ghost in pairs(ghosts_table[1].elements) do
-        --     if not ghost[1].valid then
-        --         invalids = invalids + 1
-        --     end
-        -- end
-
-        -- gui_value.caption = "" .. ghosts_table[1].end_index .. ", " .. invalids
-        -- redo_count.caption = "123"
-        -- undo_count.caption = "123"
-
-        -- redo_count.caption = "redo: " .. player.undo_redo_stack.get_redo_item_count()
-        -- undo_count.caption = "undo: " .. player.undo_redo_stack.get_undo_item_count()
-        -- -- local test1 = player.undo_redo_stack.get_redo_item(1)
-        -- local test2 = player.undo_redo_stack.get_undo_item(1)
-
         local powered_surfaces = {}
 
         local accumulator_charged = false
-
-        -- local proxies = game.surfaces[1].find_entities_filtered { name = "transport-belt" }
-        -- local belt=proxies[1]
-        -- local position_test =  belt.position
-        -- local test = game.surfaces[1].find_entities_filtered{area = rmath.bounding_box_from_position_and_size(position_test, rmath.vec2(5,5))}
-        a = 1
 
         local process_dimensional_accumulator = function(accumulator_info)
             local accumulator = accumulator_info[1]
@@ -140,18 +129,9 @@ rework_control.on_event(
             for surface_index, receivers in pairs(dimensional_receiver_table) do
                 rvector.filter(receivers, process_dimensional_receiver)
             end
-
-            -- local testing = game.surfaces[1].find_entities_filtered { name = "item-request-proxy" }
-            aa = 1
-            -- if testing[1] ~= nil then
-            --     -- testing[1].insert_plan = {}
-            --     testing[1].insert_plan[1].items.in_inventory[1].count = 1
-            --     local copy = testing[1].insert_plan
-            --     copy[1].items.in_inventory[1].count = 1
-            --     testing[1].insert_plan = copy
-            --     b = 1
         end
 
+        local loop_count = 100
         local spawns = 1
 
         for surface_index, entities_with_upgrades in pairs(entities_with_upgrades_table) do
@@ -160,10 +140,11 @@ rework_control.on_event(
             if powered_surfaces[surface_index] ~= nil and end_index ~= 0 then
                 local spawn_chances = 10
 
-                local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
+                local surface = game.surfaces[surface_index]
+                local logistic_network = surface.find_closest_logistic_network_by_position({ 0, 0 }, "player")
 
                 if logistic_network ~= nil then
-                    for i = 1, 100 do
+                    for i = 1, loop_count do
                         local current_index = (entities_with_upgrades.current_index or 0) % end_index
 
                         local entity_with_upgrade_info = entities_with_upgrades.elements[current_index]
@@ -178,52 +159,74 @@ rework_control.on_event(
                                     for _, _item in pairs(items) do
                                         local item = { name = _item.name, count = 1, quality = quality }
 
-                                        -- local result = logistic_network.get_item_count(item)
-                                        -- if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
-                                        if true then
+                                        local result = logistic_network.get_item_count(item)
+                                        if result ~= 0 and logistic_network.remove_item(item) ~= 0 then
                                             local entity_position = entity_with_upgrade.position
-                                            -- local collisions, created_entity, item_request_proxy = ghost.revive { raise_revive = true }
-                                            -- entity_with_upgrade.cancel_upgrade(entity_with_upgrade.force)
+                                            local entity_force = entity_with_upgrade.force
+
+                                            dummy.teleport({ 0, 0 }, surface)
+
                                             local result = game.surfaces[surface_index].create_entity {
                                                 name = upgrade_target.name,
                                                 position = entity_position,
                                                 quality = item.quality,
-                                                force = entity_with_upgrade.force,
+                                                force = entity_force,
                                                 fast_replace = true,
-                                                player = game.players[1],
+                                                -- player = game.players[1],
                                                 character = dummy,
                                             }
-                                            game.players[1].undo_redo_stack.remove_undo_action(1,3)
-                                            game.players[1].undo_redo_stack.remove_undo_action(1,2)
-                                            -- game.players[1].undo_redo_stack.remove_undo_item(2)
-                                            a = 1
-                                            local created_entity = true
-                                            if created_entity ~= nil then
+
+                                            if result ~= nil then
+                                                local spill_inventory = dummy.get_main_inventory()
+                                                local spill_items = spill_inventory.get_contents()
+                                                for _, spill_item in pairs(spill_items) do
+                                                    local result_inserted = logistic_network.insert(spill_item)
+                                                    local remaining = spill_item.count - result_inserted
+                                                    if remaining > 0 then
+                                                        spill_item.count = remaining
+                                                        surface.spill_item_stack {
+                                                            position = entity_position,
+                                                            stack = spill_item,
+                                                            force = entity_force,
+                                                            allow_belts = false
+                                                        }
+                                                    end
+                                                end
+                                                spill_inventory.clear()
+
+                                                dummy.teleport({ 0, 0 }, dummy_surface)
+
                                                 play_dimensional_effect(entity_position, surface_index)
                                                 spawns = spawns - 1
                                                 if spawns == 0 then
                                                     goto stop
                                                 end
-                                            end
+                                            else
+                                                logistic_network.insert(item)
 
-                                            spawn_chances = spawn_chances - 1
-                                            if spawn_chances == 0 then
-                                                goto stop
+                                                spawn_chances = spawn_chances - 1
+                                                if spawn_chances == 0 then
+                                                    goto stop
+                                                end
                                             end
-
                                             break
                                         end
                                     end
+
+                                    spawn_chances = spawn_chances - 1
+                                    if spawn_chances == 0 then
+                                        goto stop
+                                    end
+                                else
+                                    rework_control.remove_upgrade_by_index(entities_with_upgrades, current_index)
                                 end
                             else
-                                -- assert(false)
-                                -- rework_control.remove_by_index(proxies, current_index)
+                                rework_control.remove_upgrade_by_index(entities_with_upgrades, current_index)
                             end
                         end
 
                         entities_with_upgrades.current_index = current_index - 1
                     end
-                    ::stop::
                 end
             end
         end
@@ -237,7 +240,7 @@ rework_control.on_event(
                 local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
 
                 if logistic_network ~= nil then
-                    for i = 1, 100 do
+                    for i = 1, loop_count do
                         local current_index = (proxies.current_index or 0) % end_index
 
                         local proxy_info = proxies.elements[current_index]
@@ -308,9 +311,7 @@ rework_control.on_event(
 
                         proxies.current_index = current_index - 1
                     end
-                    ::stop::
                 end
-                a = 1
             end
         end
 
@@ -322,7 +323,7 @@ rework_control.on_event(
                 local logistic_network = game.surfaces[surface_index].find_closest_logistic_network_by_position({ 0, 0 }, "player")
 
                 if logistic_network ~= nil then
-                    for i = 1, 100 do
+                    for i = 1, loop_count do
                         local current_index = (ghosts.current_index or 0) % end_index
 
                         local ghost_info = ghosts.elements[current_index]
@@ -372,8 +373,9 @@ rework_control.on_event(
 
                         ghosts.current_index = current_index - 1
                     end
-                    ::stop::
                 end
             end
         end
+
+        ::stop::
     end)
