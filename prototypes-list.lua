@@ -3,6 +3,7 @@ local prototypes_names = {
     "remote-charge",
     "explosive-shotgun-shells",
     "shotgun-spidertron",
+    "cargo-pod-requires-landing-pad",
 }
 
 local function do_part(name, part)
@@ -12,7 +13,9 @@ local function do_part(name, part)
         assert(module)
         return module
     else
-        if string.match(module, "module " .. full_name .. " not found") ~= nil then
+        local not_found_string = "module " .. full_name .. " not found;"
+        local match_result = module:find(not_found_string, 1, true)
+        if match_result == nil then
             assert(false, module)
         end
 
