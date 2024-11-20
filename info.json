@@ -1,7 +1,7 @@
 {
-    "name": "rework",
-    "title": "rework",
-    "description": "Space Age Rework",
+    "name": "explosive-arsenal",
+    "title": "explosive-arsenal",
+    "description": "Explosive Weaponry",
 
     "version": "0.0.1",
     "author": "Intrets",
@@ -9,7 +9,7 @@
 
     "quality_required": false,
     "rail_bridges_required": false,
-    "space_travel_required": true,
+    "space_travel_required": false,
     "spoiling_required": false,
     "freezing_required": false,
     "segmented_units_required": false,
@@ -17,6 +17,6 @@
 
     "dependencies": [
         "base",
-        "~ space-age"
+        "intrets-lib"
     ]
 }
